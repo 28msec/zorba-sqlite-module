@@ -350,6 +350,7 @@ namespace zorba { namespace sqlite {
         elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
       }
       aItem = theFactory->createJSONObject(elements);
+      elements.clear();
       theRc = sqlite3_step(theStmt);
       return true;
     } else 
@@ -376,7 +377,7 @@ namespace zorba { namespace sqlite {
     int rc;
     ConnMap* lConnMap;
     DynamicContext* lDynCtx = const_cast<DynamicContext*>(aDctx);
-    Item item = getOneItem(aArgs, 0);
+    Item lItem = getOneItem(aArgs, 0);
 
     if(!(lConnMap = dynamic_cast<ConnMap*>(lDynCtx->getExternalFunctionParameter("sqliteConnMap"))))
     {
@@ -384,7 +385,7 @@ namespace zorba { namespace sqlite {
       lDynCtx->addExternalFunctionParameter("sqliteConnMap", lConnMap);     
     }
 
-    rc = sqlite3_open_v2(item.getStringValue().c_str(), &sqldb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    rc = sqlite3_open_v2(lItem.getStringValue().c_str(), &sqldb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     SqliteFunction::checkForError(rc, 0, sqldb);
 
     uuid lUUID;
@@ -409,8 +410,8 @@ namespace zorba { namespace sqlite {
     sqlite3 *sqldb;
     DynamicContext* lDynCtx = const_cast<DynamicContext*>(aDctx);
 
-    Item item = getOneItem(aArgs, 0);
-    String lStrUUID = item.getStringValue();
+    Item lItem = getOneItem(aArgs, 0);
+    //String lStrUUID = item.getStringValue();
 
     ConnMap* lConnMap;
     if(!(lConnMap = dynamic_cast<ConnMap*>(lDynCtx->getExternalFunctionParameter("sqliteConnMap"))))
@@ -419,7 +420,7 @@ namespace zorba { namespace sqlite {
       lDynCtx->addExternalFunctionParameter("sqliteConnMap", lConnMap);     
     }
 
-    sqldb = lConnMap->getConn(lStrUUID);
+    sqldb = lConnMap->getConn(lItem.getStringValue());
 
     if(sqldb != NULL){
       sqlite3_close(sqldb);
@@ -428,7 +429,7 @@ namespace zorba { namespace sqlite {
       SqliteFunction::throwError("SQLI0001", "DB ID not recognized");
     }
 
-    return ItemSequence_t(new SingletonItemSequence(item));
+    return ItemSequence_t(new SingletonItemSequence(lItem));
   }
 
 /*******************************************************************************
@@ -511,18 +512,14 @@ namespace zorba { namespace sqlite {
     sqlite3 *lDb;
     sqlite3_stmt *lPstmt;
     int lRc;
-    char *lSql;
+    //const char *lSql;
     const char *lTail;
     DynamicContext* lDynCtx = const_cast<DynamicContext*>(aDctx);
 
-    Item lItem0 = getOneItem(aArgs, 1);
-    std::string lQry = lItem0.getStringValue().str();
-    lSql = (char *)lQry.c_str();
-    
-    Item lItem1 = getOneItem(aArgs, 0);
-    String lStrUUID = lItem1.getStringValue();
+    Item lItemID = getOneItem(aArgs, 0);
+    Item lItemQry = getOneItem(aArgs, 1);
 
-    std::cout << "Query: " << lQry << std::endl;
+    std::cout << "Query: " << lItemQry.getStringValue().str().c_str() << std::endl;
 
     ConnMap* lConnMap;
     if(!(lConnMap = dynamic_cast<ConnMap*>(lDynCtx->getExternalFunctionParameter("sqliteConnMap"))))
@@ -531,14 +528,15 @@ namespace zorba { namespace sqlite {
       lDynCtx->addExternalFunctionParameter("sqliteConnMap", lConnMap);     
     }
 
-    lDb = lConnMap->getConn(lStrUUID);
+    lDb = lConnMap->getConn(lItemID.getStringValue());
 
     if(lDb == NULL){
       // throw error, ID not recognized
       SqliteFunction::throwError("SQLI0001", "DB ID not recognized");
     }
 
-    lRc = sqlite3_prepare_v2(lDb, lSql, strlen(lSql), &lPstmt, &lTail);
+    lRc = sqlite3_prepare_v2(lDb, lItemQry.getStringValue().str().c_str(), 
+                             lItemQry.getStringValue().str().size(), &lPstmt, &lTail);
     if(lRc != 0 && lPstmt != NULL){
       sqlite3_finalize(lPstmt);
     }
