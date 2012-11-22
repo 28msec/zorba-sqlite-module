@@ -35,18 +35,18 @@ namespace zorba { namespace sqlite {
   class ConnMap : public ExternalFunctionParameter
   {
     private:
-      typedef std::map<String, sqlite3 *> ConnMap_t;
+      typedef std::map<std::string, sqlite3 *> ConnMap_t;
       ConnMap_t* connMap;
 
     public:
       ConnMap();
       virtual ~ConnMap();
       bool 
-        storeConn(const String&, sqlite3 *sql);
+        storeConn(const std::string&, sqlite3 *sql);
       sqlite3*
-        getConn(const String&);
+        getConn(const std::string&);
       bool 
-        deleteConn(const String&);
+        deleteConn(const std::string&);
       virtual void 
         destroy() throw();
   };
@@ -111,9 +111,6 @@ namespace zorba { namespace sqlite {
               theStmt(aPrepStmt),theColumnNames(NULL),theColumnCount(0),theRc(0) {}
 
           virtual ~JSONIterator() {
-            if(theColumnNames != NULL){
-              delete[] theColumnNames;
-            }
           }
 
           void

@@ -151,15 +151,15 @@ namespace zorba { namespace sqlite {
   }
 
   bool 
-  ConnMap::storeConn(const String& aKeyName, sqlite3* sql)
+  ConnMap::storeConn(const std::string& aKeyName, sqlite3* sql)
   {
     std::pair<ConnMap_t::iterator,bool> ret;
-    ret = connMap->insert(std::pair<String, sqlite3 *>(aKeyName, sql));
+    ret = connMap->insert(std::pair<std::string, sqlite3 *>(aKeyName, sql));
     return ret.second;
   }
 
   sqlite3*
-  ConnMap::getConn(const String& aKeyName)
+  ConnMap::getConn(const std::string& aKeyName)
   {
     ConnMap_t::iterator lIter = connMap->find(aKeyName);
 
@@ -172,7 +172,7 @@ namespace zorba { namespace sqlite {
   }
 
   bool
-  ConnMap::deleteConn(const String& aKeyName)
+  ConnMap::deleteConn(const std::string& aKeyName)
   {
     ConnMap::ConnMap_t::iterator lIter = connMap->find(aKeyName);
 
@@ -193,7 +193,7 @@ namespace zorba { namespace sqlite {
       {
         if(lIter->second != NULL)
           sqlite3_close(lIter->second);
-        deleteConn(lIter->first);
+        //deleteConn(lIter->first);
       }
       connMap->clear();
       delete connMap;
@@ -373,7 +373,7 @@ namespace zorba { namespace sqlite {
       const zorba::StaticContext* aSctx,
       const zorba::DynamicContext* aDctx) const 
   {
-    sqlite3 *sqldb;
+    sqlite3 *sqldb = NULL;
     int rc;
     ConnMap* lConnMap;
     DynamicContext* lDynCtx = const_cast<DynamicContext*>(aDctx);
@@ -420,7 +420,7 @@ namespace zorba { namespace sqlite {
       lDynCtx->addExternalFunctionParameter("sqliteConnMap", lConnMap);     
     }
 
-    sqldb = lConnMap->getConn(lItem.getStringValue());
+    sqldb = lConnMap->getConn(lItem.getStringValue().str());
 
     if(sqldb != NULL){
       sqlite3_close(sqldb);
@@ -445,7 +445,7 @@ namespace zorba { namespace sqlite {
     Item res;
 
     Item item = getOneItem(aArgs, 0);
-    String lStrUUID = item.getStringValue();
+    std::string lStrUUID = item.getStringValue().str();
 
     ConnMap* lConnMap;
     if(!(lConnMap = dynamic_cast<ConnMap*>(lDynCtx->getExternalFunctionParameter("sqliteConnMap"))))
@@ -528,7 +528,7 @@ namespace zorba { namespace sqlite {
       lDynCtx->addExternalFunctionParameter("sqliteConnMap", lConnMap);     
     }
 
-    lDb = lConnMap->getConn(lItemID.getStringValue());
+    lDb = lConnMap->getConn(lItemID.getStringValue().str());
 
     if(lDb == NULL){
       // throw error, ID not recognized
