@@ -164,6 +164,18 @@ declare function s:execute-query(
 declare function s:execute-update(
   $conn as xs:anyURI,
   $sqlstr as xs:string ) as xs:integer external;
+
+(:~
+ : Returns the metadata associated to a given prepared sqlite statement.
+ :
+ : @param $pstmnt the update command to be executed as xs:anyURI.
+ :
+ : @return a sequence with the associated the metadata.
+ :
+ : @error s:SQLI0004 if $pstmnt is not a valid sqlite prepared statement.
+ :)
+declare function s:metadata(
+  $pstmnt as xs:anyURI ) as object()* external;
   
 (:~
  : Compiles a prepared statement based on an already connected sqlite database
@@ -195,7 +207,8 @@ declare function s:prepare-statement(
  : @return nothing.
  :
  : @error s:SQLI0004 if $pstmnt is not a valid sqlite prepared statement.
- : @error s:SQLI0005 if $param-num is not a valid position
+ : @error s:SQLI0005 if $param-num is not a valid position.
+ : @error s:SQLI0007 if $val is not a valid value.
  :)
 declare function s:set-value(
   $pstmnt as xs:anyURI, 
@@ -320,14 +333,3 @@ declare function s:execute-query-prepared(
 declare function s:execute-update-prepared(
   $pstmnt as xs:anyURI ) as xs:integer external;
   
-(:~
- : Returns the metadata associated to a given prepared sqlite statement.
- :
- : @param $pstmnt the update command to be executed as xs:anyURI.
- :
- : @return a sequence with the associated the metadata.
- :
- : @error s:SQLI0004 if $pstmnt is not a valid sqlite prepared statement.
- :)
-declare function s:metadata(
-  $pstmnt as xs:anyURI ) as object()* external;

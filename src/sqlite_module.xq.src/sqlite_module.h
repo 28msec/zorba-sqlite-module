@@ -51,6 +51,25 @@ namespace zorba { namespace sqlite {
         destroy() throw();
   };
 
+  class StmtMap : public ExternalFunctionParameter
+  {
+    private:
+      typedef std::map<std::string, sqlite3_stmt *> StmtMap_t;
+      StmtMap_t* stmtMap;
+
+    public:
+      StmtMap();
+      virtual ~StmtMap();
+      bool 
+        storeStmt(const std::string&, sqlite3_stmt *sql);
+      sqlite3_stmt*
+        getStmt(const std::string&);
+      bool 
+        deleteStmt(const std::string&);
+      virtual void 
+        destroy() throw();
+  };
+
   class SqliteModule : public ExternalModule {
     protected:
       class ltstr
@@ -70,15 +89,15 @@ namespace zorba { namespace sqlite {
       virtual ~SqliteModule();
 
       virtual zorba::String
-        getURI() const { return getModuleURI(); }
+      getURI() const { return getModuleURI(); }
 
       virtual zorba::ExternalFunction*
-        getExternalFunction(const String& localName);
+      getExternalFunction(const String& localName);
 
       virtual void destroy();
 
       static ItemFactory*
-        getItemFactory()
+      getItemFactory()
       {
         return Zorba::getInstance(0)->getItemFactory();
       }
@@ -101,6 +120,7 @@ namespace zorba { namespace sqlite {
           std::string* theColumnNames;
           int theColumnCount;
           int theRc;
+          bool isUpdateResult;
           // needed if theArchiveItem is not streamable an needs to be decoded
           // zorba::String   theDecodedData;
 
@@ -108,7 +128,8 @@ namespace zorba { namespace sqlite {
 
         public:
           JSONIterator(sqlite3_stmt* aPrepStmt):
-              theStmt(aPrepStmt),theColumnNames(NULL),theColumnCount(0),theRc(0) {}
+              theStmt(aPrepStmt),theColumnNames(NULL),theColumnCount(0),
+              theRc(0),isUpdateResult(false) {}
 
           virtual ~JSONIterator() {
           }
@@ -138,6 +159,59 @@ namespace zorba { namespace sqlite {
 
       zorba::Iterator_t 
         getIterator() { return new JSONIterator(thePrepStmt); }
+  };
+
+/*******************************************************************************
+ ******************************************************************************/
+  class JSONMetadataItemSequence : public ItemSequence
+  {
+    public:
+      class JSONMetadataIterator : public Iterator
+      {
+        protected:
+          sqlite3_stmt* theStmt;
+          std::string* theColumnNames;
+          int theColumnCount;
+          int theRc;
+          int theActualColumn;
+          // needed if theArchiveItem is not streamable an needs to be decoded
+          // zorba::String   theDecodedData;
+
+          zorba::ItemFactory* theFactory;
+
+        public:
+          JSONMetadataIterator(sqlite3_stmt* aPrepStmt):
+              theStmt(aPrepStmt),theColumnNames(NULL),theColumnCount(0),
+              theRc(0), theActualColumn(0) {}
+
+          virtual ~JSONMetadataIterator() {
+          }
+
+          void
+          open();
+
+          bool
+          next(zorba::Item& aItem);
+
+          void
+          close();
+
+          bool
+          isOpen() const { return theRc == SQLITE_ROW; }
+      };
+
+    protected:
+      sqlite3_stmt* thePrepStmt;
+
+    public:
+      JSONMetadataItemSequence(sqlite3_stmt* aPrepStmt)
+        : thePrepStmt(aPrepStmt)
+      {}
+
+      virtual ~JSONMetadataItemSequence() {}
+
+      zorba::Iterator_t 
+        getIterator() { return new JSONMetadataIterator(thePrepStmt); }
   };
 
 /*******************************************************************************
@@ -185,22 +259,63 @@ namespace zorba { namespace sqlite {
       const SqliteModule* theModule;
 
     public:
+      SqliteFunction(const SqliteModule* module);
+      virtual ~SqliteFunction();
 
       static zorba::Item
       getOneItem(const Arguments_t& aArgs, int aIndex);
 
-      SqliteFunction(const SqliteModule* module);
+      static ConnMap*
+      getConnectionMap(const zorba::DynamicContext* aDctx);
 
-      virtual ~SqliteFunction();
+      static StmtMap*
+      getStatementMap(const zorba::DynamicContext* aDctx);
+
+      static std::string
+      createUUID();
+
+      static sqlite3_stmt* 
+      createPreparedStatement(const zorba::DynamicContext* aDctx,
+        std::string aUUID,
+        std::string aQry);
+
+      static void
+      setValueToStatement(const zorba::DynamicContext* aDctx,
+        std::string aUUID,
+        int aPos,
+        bool aVal);
+
+      static void
+      setValueToStatement(const zorba::DynamicContext* aDctx,
+        std::string aUUID,
+        int aPos,
+        int aVal);
+
+      static void
+      setValueToStatement(const zorba::DynamicContext* aDctx, 
+        std::string aUUID,
+        int aPos,
+        double aVal);
+
+      static void
+      setValueToStatement(const zorba::DynamicContext* aDctx,
+        std::string aUUID,
+        int aPos,
+        std::string aVal);
+
+      static void
+      setValueToStatement(const zorba::DynamicContext* aDctx,
+        std::string aUUID,
+        int aPos);
 
       virtual String
-        getURI() const;
+      getURI() const;
 
       static void
-        throwError(const char*, const char*);
+      throwError(const char*, const char*);
 
       static void
-        checkForError(int aErrNo, const char* aLocalName, sqlite3 *sql);
+      checkForError(int aErrNo, const char* aLocalName, sqlite3 *sql);
 
   };
 
