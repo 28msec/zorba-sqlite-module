@@ -485,6 +485,19 @@ namespace zorba { namespace sqlite {
     return lItem;
   }
 
+  int
+  SqliteFunction::strToInt(std::string str){
+    int iInt;
+    sscanf(str.c_str(), "%d", &iInt);
+    return iInt;
+  }
+
+  double
+  SqliteFunction::strToDouble(std::string str){
+    double dDbl;
+    sscanf(str.c_str(), "f", &dDbl);
+    return dDbl;
+  }
 
   /********************
    *  Sqlite Options  *
@@ -567,6 +580,9 @@ namespace zorba { namespace sqlite {
         aKey = theFactory->createString(theColumnNames[i]);
         aType = sqlite3_column_type(theStmt, i);
         switch(aType){
+        case SQLITE_NULL:
+          aValue = theFactory->createJSONNull();
+          break;
         case SQLITE_INTEGER: 
           aValue = theFactory->createInt(sqlite3_column_int(theStmt, i));
           break;
@@ -722,9 +738,17 @@ namespace zorba { namespace sqlite {
     ConnMap* lConnMap = getConnectionMap(aDctx);
     Item lItemName = getOneItem(aArgs, 0);
     std::string lStrUUID;
+    std::string lDbName;
 
-    // Connect to the specified location with default options
-    rc = sqlite3_open_v2(lItemName.getStringValue().c_str(), &sqldb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    if(aArgs.size() == 2){
+      // add code to include options
+    }
+
+    // Connect to the specified location with the specified options
+    lDbName = lItemName.getStringValue().str();
+    if(lDbName == "")
+      lDbName = ":memory:";
+    rc = sqlite3_open_v2(lDbName.c_str(), &sqldb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     checkForError(rc, 0, sqldb);
 
     // Store the UUID for this connection and return it
@@ -931,23 +955,29 @@ namespace zorba { namespace sqlite {
     Item lItemUUID = getOneItem(aArgs, 0);
     Item lItemPos = getOneItem(aArgs, 1);
     Item lItem = getOneItem(aArgs, 2);
+    int lPos;
 
+    lPos = strToInt(lItemPos.getStringValue().str());
     switch(lItem.getTypeCode()){
     case store::XS_BOOLEAN:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lItemPos.getIntValue(), lItem.getBooleanValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItem.getBooleanValue());
       break;
     case store::XS_BYTE:
     case store::XS_INT:
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItem.getIntValue());
+      break;
     case store::XS_INTEGER:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lItemPos.getIntValue(), lItem.getIntValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, strToInt(lItem.getStringValue().str()));
       break;
     case store::XS_FLOAT:
     case store::XS_DOUBLE:
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItem.getDoubleValue());
+      break;
     case store::XS_DECIMAL:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lItemPos.getIntValue(), lItem.getDoubleValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, strToDouble(lItem.getStringValue().str()));
       break;
     case store::XS_STRING:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lItemPos.getIntValue(), lItem.getStringValue().str());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItem.getStringValue().str());
       break;
     default:
       throwError("SQLI0007", "value is not of a valid type");
@@ -967,7 +997,7 @@ namespace zorba { namespace sqlite {
     Item lItemPos = getOneItem(aArgs, 1);
     Item lItemBool = getOneItem(aArgs, 2);
 
-    setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lItemPos.getIntValue(), lItemBool.getBooleanValue());
+    setValueToStatement(aDctx, lItemUUID.getStringValue().str(), strToInt(lItemPos.getStringValue().str()), lItemBool.getBooleanValue());
     return ItemSequence_t(new EmptySequence());
   }
 
@@ -982,17 +1012,22 @@ namespace zorba { namespace sqlite {
     Item lItemUUID = getOneItem(aArgs, 0);
     Item lItemPos = getOneItem(aArgs, 1);
     Item lItemNumeric = getOneItem(aArgs, 2);
+    int lPos = strToInt(lItemPos.getStringValue().str());
 
     switch(lItemNumeric.getTypeCode()){
     case store::XS_BYTE:
     case store::XS_INT:
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItemNumeric.getIntValue());
+      break;
     case store::XS_INTEGER:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lItemPos.getIntValue(), lItemNumeric.getIntValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, strToInt(lItemNumeric.getStringValue().str()));
       break;
     case store::XS_FLOAT:
     case store::XS_DOUBLE:
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItemNumeric.getDoubleValue());
+      break;
     case store::XS_DECIMAL:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lItemPos.getIntValue(), lItemNumeric.getDoubleValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, strToDouble(lItemNumeric.getStringValue().str()));
       break;
     default:
       throwError("SQLI0006", "value is not a valid numeric type");
@@ -1012,7 +1047,7 @@ namespace zorba { namespace sqlite {
     Item lItemPos = getOneItem(aArgs, 1);
     Item lItemString = getOneItem(aArgs, 2);
 
-    setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lItemPos.getIntValue(), lItemString.getStringValue().str());
+    setValueToStatement(aDctx, lItemUUID.getStringValue().str(), strToInt(lItemPos.getStringValue().str()), lItemString.getStringValue().str());
     return ItemSequence_t(new EmptySequence());
   }
 
@@ -1027,7 +1062,7 @@ namespace zorba { namespace sqlite {
     Item lItemUUID = getOneItem(aArgs, 0);
     Item lItemPos = getOneItem(aArgs, 1);
 
-    setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lItemPos.getIntValue());
+    setValueToStatement(aDctx, lItemUUID.getStringValue().str(), strToInt(lItemPos.getStringValue().str()));
     return ItemSequence_t(new EmptySequence());
   }
 

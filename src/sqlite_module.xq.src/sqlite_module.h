@@ -317,6 +317,12 @@ namespace zorba { namespace sqlite {
       static void
       checkForError(int aErrNo, const char* aLocalName, sqlite3 *sql);
 
+      static int
+      strToInt(std::string str);
+
+      static double
+      strToDouble(std::string strcat);
+
   };
 
   class ConnectFunction : public SqliteFunction {

@@ -210,7 +210,7 @@ declare function s:prepare-statement(
  : @error s:SQLI0005 if $param-num is not a valid position.
  : @error s:SQLI0007 if $val is not a valid value.
  :)
-declare function s:set-value(
+declare %an:sequential function s:set-value(
   $pstmnt as xs:anyURI, 
   $param-num as xs:integer,
   $val as item() ) as empty-sequence() external;
@@ -227,7 +227,7 @@ declare function s:set-value(
  : @error s:SQLI0004 if $pstmnt is not a valid sqlite prepared statement.
  : @error s:SQLI0005 if $param-num is not a valid position
  :)
-declare function s:set-boolean(
+declare %an:sequential function s:set-boolean(
   $pstmnt as xs:anyURI, 
   $param-num as xs:integer,
   $val as xs:boolean ) as empty-sequence() external;
@@ -245,7 +245,7 @@ declare function s:set-boolean(
  : @error s:SQLI0005 if $param-num is not a valid position
  : @error s:SQLI0006 if $val is not a valid numeric type.
  :)
-declare function s:set-numeric(
+declare %an:sequential function s:set-numeric(
   $pstmnt as xs:anyURI, 
   $param-num as xs:integer,
   $val as xs:anyAtomicType ) as empty-sequence() external;
@@ -262,7 +262,7 @@ declare function s:set-numeric(
  : @error s:SQLI0004 if $pstmnt is not a valid sqlite prepared statement.
  : @error s:SQLI0005 if $param-num is not a valid position
  :)
-declare function s:set-string(
+declare %an:sequential function s:set-string(
   $pstmnt as xs:anyURI, 
   $param-num as xs:integer,
   $val as xs:string ) as empty-sequence() external;
@@ -278,7 +278,7 @@ declare function s:set-string(
  : @error s:SQLI0004 if $pstmnt is not a valid sqlite prepared statement.
  : @error s:SQLI0005 if $param-num is not a valid position
  :)
-declare function s:set-null(
+declare %an:sequential function s:set-null(
   $pstmnt as xs:anyURI, 
   $param-num as xs:integer ) as empty-sequence() external;
   
@@ -291,7 +291,7 @@ declare function s:set-null(
  :
  : @error s:SQLI0004 if $pstmnt is not a valid sqlite prepared statement.
  :)
-declare function s:clear-params(
+declare %an:sequential function s:clear-params(
   $pstmnt as xs:anyURI ) as empty-sequence() external;
   
 (:~
