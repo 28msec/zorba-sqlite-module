@@ -437,6 +437,21 @@ namespace zorba { namespace sqlite {
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
 
+  void
+  SqliteFunction::clearValues(const zorba::DynamicContext* aDctx,
+    std::string aUUID)
+  {
+    sqlite3_stmt *lPstmt;
+    StmtMap *stmtMap = getStatementMap(aDctx);
+    int lRc, aPos = 1;
+    // go over all the parameters in the prepared statement
+    // and set them to null
+    do {
+      lRc = sqlite3_bind_null(lPstmt, aPos);
+      aPos++;
+    } while(lRc != SQLITE_RANGE);
+  }
+
   String 
   SqliteFunction::getURI() const
   {
@@ -505,7 +520,7 @@ namespace zorba { namespace sqlite {
 
   SqliteOptions::SqliteOptions()
     : theOpenReadOnly(false),
-      theOpenCreate(false),
+      theOpenCreate(true),
       theOpenNoMutex(false),
       theOpenSharedCache(false) {}
 
@@ -518,33 +533,51 @@ namespace zorba { namespace sqlite {
   void
   SqliteOptions::setValues(Item& aOptions)
   {
-    Item lOption;
+    Item lOption, lItemJSONKey;
 
-    Iterator_t lOptionIter = aOptions.getChildren();
-    lOptionIter->open();
-
-    while (lOptionIter->next(lOption))
+    Iterator_t lIterKeys = aOptions.getObjectKeys();
+    store::StoreConsts::JSONItemKind lJSONK = aOptions.getJSONItemKind();
+    lIterKeys->open();
+    while (lIterKeys->next(lItemJSONKey))
     {
-      Item lOptionName;
-      lOption.getNodeName(lOptionName);
+      Item lOptionValue;
+      lOptionValue = aOptions.getObjectValue(lItemJSONKey.getStringValue());
 
-      if (lOptionName.getLocalName() == "open-read-only")
+      if (lItemJSONKey.getStringValue() == "open-read-only")
       {
-        theOpenReadOnly = lOption.getStringValue() == "true" ? true : false;;
+        theOpenReadOnly = lOptionValue.getBooleanValue() == true;
       }
-      else if (lOptionName.getLocalName() == "open-create")
+      else if (lItemJSONKey.getStringValue() == "open-create")
       {
-        theOpenCreate = lOption.getStringValue() == "true" ? true : false;;
+        theOpenCreate = lOptionValue.getBooleanValue();
       }
-      else if (lOptionName.getLocalName() == "open-no-mutex")
+      else if (lItemJSONKey.getStringValue() == "open-no-mutex")
       {
-        theOpenNoMutex = lOption.getStringValue() == "true" ? true : false;
+        theOpenNoMutex = lOptionValue.getBooleanValue();
       }
-      else if(lOptionName.getLocalName() == "open-shared-cache")
+      else if(lItemJSONKey.getStringValue() == "open-shared-cache")
       {
-        theOpenSharedCache = lOption.getStringValue() == "true" ? true : false;
-      }
+        theOpenSharedCache = lOptionValue.getBooleanValue();
+      } else
+        SqliteFunction::throwError("SQLI0007", ("Unknown option specified - "+lItemJSONKey.getStringValue().str()).c_str());
     }
+    lIterKeys->close();
+  }
+
+  int
+  SqliteOptions::getOptionsAsInt(){
+    int opts = 0;
+    if(theOpenCreate)
+      opts |= SQLITE_OPEN_CREATE;
+    if(theOpenReadOnly)
+      opts |= SQLITE_OPEN_READONLY;
+    else
+      opts |= SQLITE_OPEN_READWRITE;
+    if(theOpenNoMutex)
+      opts |= SQLITE_OPEN_NOMUTEX;
+    if(theOpenSharedCache)
+      opts |= SQLITE_OPEN_SHAREDCACHE;
+    return opts;
   }
 
 /*******************************************************************************
@@ -660,7 +693,7 @@ namespace zorba { namespace sqlite {
     const char *lDataType;
     const char *lCollSequence;
     const char *lOriginName;
-    int lNotNull, lPrimaryKey, lAutoinc;
+    int lNotNull, lPrimaryKey, lAutoinc, lRc;
 
     if(theRc == SQLITE_ROW){
       // Get the metadata for 'theActualColumn' column
@@ -669,7 +702,7 @@ namespace zorba { namespace sqlite {
       lDbName = sqlite3_column_database_name(theStmt, theActualColumn);
       lTableName = sqlite3_column_table_name(theStmt, theActualColumn);
       lOriginName = sqlite3_column_origin_name(theStmt, theActualColumn);
-      sqlite3_table_column_metadata(lDbHandle,
+      lRc = sqlite3_table_column_metadata(lDbHandle,
                                     lDbName,
                                     lTableName,
                                     lOriginName,
@@ -678,6 +711,8 @@ namespace zorba { namespace sqlite {
                                     &lNotNull,
                                     &lPrimaryKey,
                                     &lAutoinc);
+      if(lRc != 0)
+        SqliteFunction::throwError(0, sqlite3_errmsg(lDbHandle));
       aKey = theFactory->createString("Database");
       aValue = theFactory->createString(lDbName);
       elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
@@ -737,18 +772,23 @@ namespace zorba { namespace sqlite {
     int rc;
     ConnMap* lConnMap = getConnectionMap(aDctx);
     Item lItemName = getOneItem(aArgs, 0);
+    Item lItemOpts;
     std::string lStrUUID;
     std::string lDbName;
+    SqliteOptions lOptions;
 
     if(aArgs.size() == 2){
       // add code to include options
+      lItemOpts = getOneItem(aArgs, 1);
+      lOptions.setValues(lItemOpts);
     }
 
     // Connect to the specified location with the specified options
     lDbName = lItemName.getStringValue().str();
     if(lDbName == "")
       lDbName = ":memory:";
-    rc = sqlite3_open_v2(lDbName.c_str(), &sqldb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    //std::cout << "name: " << lDbName << " flags: " << lOptions.getOptionsAsInt() << std::endl;
+    rc = sqlite3_open_v2(lDbName.c_str(), &sqldb, lOptions.getOptionsAsInt(), NULL);
     checkForError(rc, 0, sqldb);
 
     // Store the UUID for this connection and return it
@@ -773,7 +813,7 @@ namespace zorba { namespace sqlite {
     
     sqldb = lConnMap->getConn(lItem.getStringValue().str());
     if(sqldb != NULL){
-      // In case we have it connected disconnect it
+      // In case we have it connected, disconnect it
       sqlite3_close(sqldb);
     } else {
       // throw error, UUID not recognized
@@ -887,15 +927,26 @@ namespace zorba { namespace sqlite {
     sqlite3_stmt *lPstmt;
     Item lItemUUID = getOneItem(aArgs, 0);
     Item lItemQry = getOneItem(aArgs, 1);
+    Item lItemRes;
+    Item lItemJSONKey;
 
     // Create the prepared statement with the UUID and Query passed
     lPstmt = createPreparedStatement(aDctx, lItemUUID.getStringValue().str(),
       lItemQry.getStringValue().str());
 
     // Once we got the SQL Query executed just pass it to the JSON Sequence
-    // so it will return what we need to the user
+    // after we get the result we convert it to a integer Item
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
-    return ItemSequence_t(lSeq.release());
+    Iterator_t lIter = lSeq->getIterator();
+    lIter->open();
+    lIter->next(lItemRes);
+    lIter->close();
+    Iterator_t lIterKeys = lItemRes.getObjectKeys();
+    lIterKeys->open();
+    lIterKeys->next(lItemJSONKey);
+    lIterKeys->close();
+    Item lItemValue = lItemRes.getObjectValue(lItemJSONKey.getStringValue());
+    return ItemSequence_t(new SingletonItemSequence(lItemValue));
   }
 
 /*******************************************************************************
@@ -912,6 +963,10 @@ namespace zorba { namespace sqlite {
 
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemPstmt.getStringValue().str());
+    if(lPstmt == NULL){
+      // No valid prepared statement id passed
+      throwError("SQLI0004", "The Prepared Statement ID passed is not valid");
+    }
 
     // So now create a JSONMetadataItemSequence and let it
     // get us what we need
@@ -1074,7 +1129,9 @@ namespace zorba { namespace sqlite {
     const zorba::StaticContext* aSctx,
     const zorba::DynamicContext* aDctx) const 
   {
-    SqliteFunction::throwError("ERR9999", "Function not yet implemented");
+    Item lItemUUID = getOneItem(aArgs, 0);
+
+    clearValues(aDctx, lItemUUID.getStringValue().str());
     return ItemSequence_t(new EmptySequence());
   }
 
@@ -1127,12 +1184,22 @@ namespace zorba { namespace sqlite {
     sqlite3_stmt *lPstmt;
     StmtMap *stmtMap = getStatementMap(aDctx);
     Item lItemUUID = getOneItem(aArgs, 0);
+    Item lItemRes, lItemJSONKey;
 
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
     // And let the JSONItemSequence execute it
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
-    return ItemSequence_t(lSeq.release());
+    Iterator_t lIter = lSeq->getIterator();
+    lIter->open();
+    lIter->next(lItemRes);
+    lIter->close();
+    Iterator_t lIterKeys = lItemRes.getObjectKeys();
+    lIterKeys->open();
+    lIterKeys->next(lItemJSONKey);
+    lIterKeys->close();
+    Item lItemValue = lItemRes.getObjectValue(lItemJSONKey.getStringValue());
+    return ItemSequence_t(new SingletonItemSequence(lItemValue));
   }
 
 } /* namespace zorba */ } /* namespace archive*/

@@ -48,10 +48,11 @@ declare %an:sequential function s:connect(
  :
  : <p>The options are of the form: 
  : <pre>
- : &lt;sqlite:options>
- :   &lt;sqlite:readwrite/>
- :   &lt;sqlite:create/>
- : &lt;/sqlite:options>
+ : {
+ :   "open_read_only" : true,
+ :   "open_create     : false,
+ :   ... 
+ : }
  : </pre>
  : </p>
  :
@@ -61,10 +62,11 @@ declare %an:sequential function s:connect(
  : @return the sqlite database object as xs:anyURI.
  :
  : @error s:SQLI0001 if the databse name doesn't exist or it couldn't be opened.
+ : @error s:SQLI0007 if there is any unknown option specified.
  :)
 declare %an:sequential function s:connect(
   $db-name as xs:string,
-  $options as element(s:options)
+  $options as object()
   ) as xs:anyURI external;
  
 (:~
@@ -132,7 +134,7 @@ declare function s:rollback(
  :)
 declare function s:execute(
   $conn as xs:anyURI,
-  $sqlstr as xs:string ) as xs:anyURI external;
+  $sqlstr as xs:string ) as object()* external;
   
 (:~
  : Executes a query (select command) over an already opened sqlite database

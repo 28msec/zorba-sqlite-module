@@ -228,22 +228,25 @@ namespace zorba { namespace sqlite {
     SqliteOptions();
 
     const bool
-      getOpenReadOnly() const { return theOpenReadOnly; }
+    getOpenReadOnly() const { return theOpenReadOnly; }
 
     const bool
-      getOpenCreate() const { return theOpenCreate; }
+    getOpenCreate() const { return theOpenCreate; }
 
     const bool
-      getOpenNoMutex() const { return theOpenNoMutex; }
+    getOpenNoMutex() const { return theOpenNoMutex; }
 
     const bool
-      getOpenSharedCache() const { return theOpenSharedCache; }
+    getOpenSharedCache() const { return theOpenSharedCache; }
 
     void
-      setValues(Item&);
+    setValues(Item&);
 
     void
-      setValues(struct sqlite3* aSqlite);
+    setValues(struct sqlite3* aSqlite);
+
+    int
+    getOptionsAsInt();
 
   protected:
     static std::string
@@ -307,6 +310,10 @@ namespace zorba { namespace sqlite {
       setValueToStatement(const zorba::DynamicContext* aDctx,
         std::string aUUID,
         int aPos);
+
+      static void
+      clearValues(const zorba::DynamicContext* aDctx,
+        std::string aUUID);
 
       virtual String
       getURI() const;
