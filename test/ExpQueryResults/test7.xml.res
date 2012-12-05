@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<food><id>1</id><name>apple</name><calories>80</calories></food><food><id>2</id><name>orange</name><calories>60</calories></food><food><id>3</id><name>fried egg</name><calories>92</calories></food><food><id>4</id><name>cholate milk regular</name><calories>210</calories></food>

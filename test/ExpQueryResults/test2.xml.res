@@ -1,0 +1,1 @@
+{ "id" : 2, "name" : "orange", "calories" : 60 }{ "id" : 1, "name" : "apple", "calories" : 80 }{ "id" : 3, "name" : "fried egg", "calories" : 92 }{ "id" : 4, "name" : "cholate milk regular", "calories" : 210 }

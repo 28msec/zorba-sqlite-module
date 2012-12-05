@@ -3,8 +3,8 @@ import module namespace f = "http://expath.org/ns/file";
 
 let $path := f:path-to-native(resolve-uri("./"))
 let $db := s:connect(concat($path, "small2.db"))
-let $isconn := s:is-connected($db)
-let $result := s:execute-query($db, "select * from smalltable")
+let $prep-statement := s:prepare-statement($db, "SELECT * FROM smalltable")
+let $meta := s:metadata($prep-statement)
 let $old-db := s:disconnect($db)
 
-return ($result, $isconn)
+return $meta

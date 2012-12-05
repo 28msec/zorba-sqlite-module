@@ -317,14 +317,18 @@ namespace zorba { namespace sqlite {
     lDb = lConnMap->getConn(aUUID);
     if(lDb == NULL){
       // throw error, ID not recognized
-      throwError("SQLI0001", "DB ID not recognized");
+      throwError("SQLI0002", "DB ID not recognized");
     }
 
     lRc = sqlite3_prepare_v2(lDb, aQry.c_str(), aQry.size(), &lPstmt, &lTail);
     if(lRc != 0 && lPstmt != NULL){
       sqlite3_finalize(lPstmt);
     }
-    checkForError(lRc, 0, lDb);
+    if(lRc == SQLITE_ERROR) {
+      throwError("SQLI0003", "SQL Statement is not valid");
+      std::cout << "SQLI0003 - " << sqlite3_errmsg(lDb) << std::endl; 
+    } else
+      checkForError(lRc, 0, lDb);
 
     return lPstmt;
   }
@@ -533,7 +537,7 @@ namespace zorba { namespace sqlite {
   void
   SqliteOptions::setValues(Item& aOptions)
   {
-    Item lOption, lItemJSONKey;
+    Item lItemJSONKey;
 
     Iterator_t lIterKeys = aOptions.getObjectKeys();
     store::StoreConsts::JSONItemKind lJSONK = aOptions.getJSONItemKind();
@@ -559,6 +563,8 @@ namespace zorba { namespace sqlite {
       {
         theOpenSharedCache = lOptionValue.getBooleanValue();
       } else
+        // Not sure if I should stop here in case that any option
+        // are not in the list
         SqliteFunction::throwError("SQLI0007", ("Unknown option specified - "+lItemJSONKey.getStringValue().str()).c_str());
     }
     lIterKeys->close();
@@ -768,8 +774,8 @@ namespace zorba { namespace sqlite {
       const zorba::StaticContext* aSctx,
       const zorba::DynamicContext* aDctx) const 
   {
-    sqlite3 *sqldb = NULL;
-    int rc;
+    sqlite3 *lSqldb = NULL;
+    int lRc;
     ConnMap* lConnMap = getConnectionMap(aDctx);
     Item lItemName = getOneItem(aArgs, 0);
     Item lItemOpts;
@@ -787,13 +793,15 @@ namespace zorba { namespace sqlite {
     lDbName = lItemName.getStringValue().str();
     if(lDbName == "")
       lDbName = ":memory:";
-    //std::cout << "name: " << lDbName << " flags: " << lOptions.getOptionsAsInt() << std::endl;
-    rc = sqlite3_open_v2(lDbName.c_str(), &sqldb, lOptions.getOptionsAsInt(), NULL);
-    checkForError(rc, 0, sqldb);
+    lRc = sqlite3_open_v2(lDbName.c_str(), &lSqldb, lOptions.getOptionsAsInt(), NULL);
+    if(lRc == SQLITE_CANTOPEN)
+      throwError("SQLI0001", "DB file does not exist");
+    else
+      checkForError(lRc, 0, lSqldb);
 
     // Store the UUID for this connection and return it
     lStrUUID = createUUID();
-    lConnMap->storeConn(lStrUUID, sqldb);
+    lConnMap->storeConn(lStrUUID, lSqldb);
 
     return ItemSequence_t(new SingletonItemSequence(SqliteModule::getItemFactory()->createAnyURI(lStrUUID)));
   }
@@ -807,17 +815,17 @@ namespace zorba { namespace sqlite {
     const zorba::StaticContext* aSctx,
     const zorba::DynamicContext* aDctx) const 
   { 
-    sqlite3 *sqldb;
+    sqlite3 *lSqldb;
     Item lItem = getOneItem(aArgs, 0);
     ConnMap* lConnMap = getConnectionMap(aDctx);
     
-    sqldb = lConnMap->getConn(lItem.getStringValue().str());
-    if(sqldb != NULL){
+    lSqldb = lConnMap->getConn(lItem.getStringValue().str());
+    if(lSqldb != NULL){
       // In case we have it connected, disconnect it
-      sqlite3_close(sqldb);
+      sqlite3_close(lSqldb);
     } else {
       // throw error, UUID not recognized
-      throwError("SQLI0001", "DB ID not recognized");
+      throwError("SQLI0002", "DB ID not recognized");
     }
 
     return ItemSequence_t(new SingletonItemSequence(lItem));
@@ -831,15 +839,15 @@ namespace zorba { namespace sqlite {
     const zorba::StaticContext* aSctx,
     const zorba::DynamicContext* aDctx) const 
   {
-    sqlite3 *sqldb;
+    sqlite3 *lSqldb;
     ConnMap* lConnMap = getConnectionMap(aDctx);
     Item lItemRes;
     Item lItemUUID = getOneItem(aArgs, 0);
 
     // Look for the UUID into the Connection Map
     // if it is in there means that you have it connected
-    sqldb = lConnMap->getConn(lItemUUID.getStringValue().str());
-    if(sqldb == NULL){
+    lSqldb = lConnMap->getConn(lItemUUID.getStringValue().str());
+    if(lSqldb == NULL){
       lItemRes = SqliteModule::getItemFactory()->createBoolean(false);
     } else {
       lItemRes = SqliteModule::getItemFactory()->createBoolean(true);
@@ -856,8 +864,15 @@ namespace zorba { namespace sqlite {
     const zorba::StaticContext* aSctx,
     const zorba::DynamicContext* aDctx) const 
   {
-    throwError("ERR9999", "function not supported");
-    return ItemSequence_t(new EmptySequence());
+    sqlite3 *lDb;
+    Item lItemUUID = getOneItem(aArgs, 0);
+    ConnMap* lConnMap = getConnectionMap(aDctx);
+
+    lDb = lConnMap->getConn(lItemUUID.getStringValue().str());
+    if(lDb == NULL)
+      throwError("SQLI0002", "DB ID not recognized");
+
+    return ItemSequence_t(new SingletonItemSequence(lItemUUID));
   }
 
 /*******************************************************************************
@@ -868,8 +883,15 @@ namespace zorba { namespace sqlite {
     const zorba::StaticContext* aSctx,
     const zorba::DynamicContext* aDctx) const 
   {
-    throwError("ERR9999", "function not supported");
-    return ItemSequence_t(new EmptySequence());
+    sqlite3 *lDb;
+    Item lItemUUID = getOneItem(aArgs, 0);
+    ConnMap* lConnMap = getConnectionMap(aDctx);
+
+    lDb = lConnMap->getConn(lItemUUID.getStringValue().str());
+    if(lDb == NULL)
+      throwError("SQLI0002", "DB ID not recognized");
+
+    return ItemSequence_t(new SingletonItemSequence(lItemUUID));
   }
 
 /*******************************************************************************
@@ -1149,6 +1171,9 @@ namespace zorba { namespace sqlite {
 
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
+    if(lPstmt == NULL)
+      throwError("SQLI0004", "prepared statement not valid");
+
     // And let the JSONItemSequence execute it
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
     return ItemSequence_t(lSeq.release());
@@ -1168,6 +1193,9 @@ namespace zorba { namespace sqlite {
 
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
+    if(lPstmt == NULL)
+      throwError("SQLI0004", "prepared statement not valid");
+
     // And let the JSONItemSequence execute it
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
     return ItemSequence_t(lSeq.release());
@@ -1188,6 +1216,9 @@ namespace zorba { namespace sqlite {
 
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
+    if(lPstmt == NULL)
+      throwError("SQLI0004", "prepared statement not valid");
+
     // And let the JSONItemSequence execute it
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
     Iterator_t lIter = lSeq->getIterator();
