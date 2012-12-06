@@ -307,7 +307,7 @@ declare %an:sequential function s:clear-params(
  : @error s:SQLI0004 if $pstmnt is not a valid sqlite prepared statement.
  :)
 declare function s:execute-prepared(
-  $pstmnt as xs:anyURI ) as xs:anyURI external;
+  $pstmnt as xs:anyURI ) as object()* external;
   
 (:~
  : Execute a query (select command) over an already connected sqlite

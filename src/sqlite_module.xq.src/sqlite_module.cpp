@@ -325,8 +325,9 @@ namespace zorba { namespace sqlite {
       sqlite3_finalize(lPstmt);
     }
     if(lRc == SQLITE_ERROR) {
-      throwError("SQLI0003", "SQL Statement is not valid");
-      std::cout << "SQLI0003 - " << sqlite3_errmsg(lDb) << std::endl; 
+      std::string lErr = "SQL Statement is not valid; ";
+      lErr += sqlite3_errmsg(lDb);
+      throwError("SQLI0003", lErr.c_str());
     } else
       checkForError(lRc, 0, lDb);
 
