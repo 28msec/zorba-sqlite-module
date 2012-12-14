@@ -515,7 +515,7 @@ namespace zorba { namespace sqlite {
   double
   SqliteFunction::strToDouble(std::string str){
     double dDbl;
-    sscanf(str.c_str(), "f", &dDbl);
+    sscanf(str.c_str(), "%f", &dDbl);
     return dDbl;
   }
 

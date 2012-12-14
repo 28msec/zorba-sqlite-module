@@ -45,6 +45,8 @@ declare %an:sequential function s:connect(
 
 (:~
  : connect to a sqlite database with options.
+ : All options are true/false values. Available options are: open-read-only,
+ : open-create, open-no-mutex, and open-shared-cache.
  :
  : <p>The options are of the form: 
  : <pre>
