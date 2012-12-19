@@ -317,7 +317,7 @@ namespace zorba { namespace sqlite {
     lDb = lConnMap->getConn(aUUID);
     if(lDb == NULL){
       // throw error, ID not recognized
-      throwError("SQLI0002", "DB ID not recognized");
+      throwError("SQLI0002", getErrorMessage("SQLI0002"));
     }
 
     lRc = sqlite3_prepare_v2(lDb, aQry.c_str(), aQry.size(), &lPstmt, &lTail);
@@ -325,7 +325,8 @@ namespace zorba { namespace sqlite {
       sqlite3_finalize(lPstmt);
     }
     if(lRc == SQLITE_ERROR) {
-      std::string lErr = "SQL Statement is not valid; ";
+      std::string lErr = getErrorMessage("SQLI0003");
+      lErr += "; ";
       lErr += sqlite3_errmsg(lDb);
       throwError("SQLI0003", lErr.c_str());
     } else
@@ -346,11 +347,11 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", "prepared statement not valid");
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
     }
     lRc = sqlite3_bind_int(lPstmt, aPos, (aVal==true)?1:0);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", "parameter position out of range");
+      throwError("SQLI0005", getErrorMessage("SQLI0005"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -368,11 +369,11 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", "prepared statement not valid");
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
     }
     lRc = sqlite3_bind_int(lPstmt, aPos, aVal);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", "parameter position out of range");
+      throwError("SQLI0005", getErrorMessage("SQLI0005"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -390,11 +391,11 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", "prepared statement not valid");
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
     }
     lRc = sqlite3_bind_double(lPstmt, aPos, aVal);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", "parameter position out of range");
+      throwError("SQLI0005", getErrorMessage("SQLI0005"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -412,11 +413,11 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", "prepared statement not valid");
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
     }
     lRc = sqlite3_bind_text(lPstmt, aPos, aVal.c_str(), aVal.size(), SQLITE_STATIC);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", "parameter position out of range");
+      throwError("SQLI0005", getErrorMessage("SQLI0005"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -433,11 +434,11 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", "prepared statement not valid");
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
     }
     lRc = sqlite3_bind_null(lPstmt, aPos);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", "parameter position out of range");
+      throwError("SQLI0005", getErrorMessage("SQLI0005"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -449,8 +450,13 @@ namespace zorba { namespace sqlite {
     sqlite3_stmt *lPstmt;
     StmtMap *stmtMap = getStatementMap(aDctx);
     int lRc, aPos = 1;
+
     // go over all the parameters in the prepared statement
     // and set them to null
+    lPstmt = stmtMap->getStmt(aUUID);
+    if(lPstmt == NULL){
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+    }
     do {
       lRc = sqlite3_bind_null(lPstmt, aPos);
       aPos++;
@@ -519,6 +525,43 @@ namespace zorba { namespace sqlite {
     return dDbl;
   }
 
+  char *
+  SqliteFunction::getErrorMessage(std::string error){
+    if(error == "SQLI0001")
+    {
+      return "Database file does not exist or it is not possible to open it";
+    } 
+    else if(error == "SQLI0002")
+    {
+      return "Connection ID passed is not valid";
+    }
+    else if(error == "SQLI0003")
+    {
+      return "Statement passed is not a valid SQL statement";
+    }
+    else if(error == "SQLI0004")
+    {
+      return "Prepared statement passed is not valid";
+    }
+    else if(error == "SQLI0005")
+    {
+      return "Parameter position passed is not valid";
+    }
+    else if(error == "SQLI0006")
+    {
+      return "Parameter passed is not a valid number";
+    }
+    else if(error == "SQLI0007")
+    {
+      return "Parameter passed is not a valid value";
+    }
+    else if(error == "SQLI9999")
+    {
+      return "Internal error ocurred";
+    }
+    return "";
+  }
+
   /********************
    *  Sqlite Options  *
    ********************/
@@ -566,7 +609,7 @@ namespace zorba { namespace sqlite {
       } else
         // Not sure if I should stop here in case that any option
         // are not in the list
-        SqliteFunction::throwError("SQLI0007", ("Unknown option specified - "+lItemJSONKey.getStringValue().str()).c_str());
+        SqliteFunction::throwError("SQLI0007", (std::string(SqliteFunction::getErrorMessage("SQLI0007")) + " - " + lItemJSONKey.getStringValue().str()).c_str());
     }
     lIterKeys->close();
   }
@@ -608,10 +651,11 @@ namespace zorba { namespace sqlite {
   }
 
   bool JSONItemSequence::JSONIterator::next(zorba::Item& aItem){
-    int aType;
+    int aType, aSize;
     zorba::Item aKey;
     zorba::Item aValue;
     std::vector<std::pair<zorba::Item, zorba::Item>> elements;
+    const char *aBlobPtr;
 
     if(theRc == SQLITE_ROW){
       // get the resulting data from the statement
@@ -628,6 +672,11 @@ namespace zorba { namespace sqlite {
           break;
         case SQLITE_FLOAT:
           aValue = theFactory->createDouble(sqlite3_column_double(theStmt, i));
+          break;
+        case SQLITE_BLOB:
+          aSize = sqlite3_column_bytes(theStmt, i);
+          aBlobPtr = (const char *)sqlite3_column_blob(theStmt, i);
+          aValue = theFactory->createBase64Binary(aBlobPtr, aSize);
           break;
         default:
           std::string str = std::string((const char *)sqlite3_column_text(theStmt, i));
@@ -796,7 +845,7 @@ namespace zorba { namespace sqlite {
       lDbName = ":memory:";
     lRc = sqlite3_open_v2(lDbName.c_str(), &lSqldb, lOptions.getOptionsAsInt(), NULL);
     if(lRc == SQLITE_CANTOPEN)
-      throwError("SQLI0001", "DB file does not exist");
+      throwError("SQLI0001", getErrorMessage("SQLI0001"));
     else
       checkForError(lRc, 0, lSqldb);
 
@@ -826,7 +875,7 @@ namespace zorba { namespace sqlite {
       sqlite3_close(lSqldb);
     } else {
       // throw error, UUID not recognized
-      throwError("SQLI0002", "DB ID not recognized");
+      throwError("SQLI0002", getErrorMessage("SQLI0002"));
     }
 
     return ItemSequence_t(new SingletonItemSequence(lItem));
@@ -871,7 +920,7 @@ namespace zorba { namespace sqlite {
 
     lDb = lConnMap->getConn(lItemUUID.getStringValue().str());
     if(lDb == NULL)
-      throwError("SQLI0002", "DB ID not recognized");
+      throwError("SQLI0002", getErrorMessage("SQLI0002"));
 
     return ItemSequence_t(new SingletonItemSequence(lItemUUID));
   }
@@ -890,7 +939,7 @@ namespace zorba { namespace sqlite {
 
     lDb = lConnMap->getConn(lItemUUID.getStringValue().str());
     if(lDb == NULL)
-      throwError("SQLI0002", "DB ID not recognized");
+      throwError("SQLI0002", getErrorMessage("SQLI0002"));
 
     return ItemSequence_t(new SingletonItemSequence(lItemUUID));
   }
@@ -988,7 +1037,7 @@ namespace zorba { namespace sqlite {
     lPstmt = stmtMap->getStmt(lItemPstmt.getStringValue().str());
     if(lPstmt == NULL){
       // No valid prepared statement id passed
-      throwError("SQLI0004", "The Prepared Statement ID passed is not valid");
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
     }
 
     // So now create a JSONMetadataItemSequence and let it
@@ -1058,7 +1107,7 @@ namespace zorba { namespace sqlite {
       setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItem.getStringValue().str());
       break;
     default:
-      throwError("SQLI0007", "value is not of a valid type");
+      throwError("SQLI0007", getErrorMessage("SQLI0007"));
     }
     return ItemSequence_t(new EmptySequence());
   }
@@ -1108,7 +1157,7 @@ namespace zorba { namespace sqlite {
       setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, strToDouble(lItemNumeric.getStringValue().str()));
       break;
     default:
-      throwError("SQLI0006", "value is not a valid numeric type");
+      throwError("SQLI0006", getErrorMessage("SQLI0006"));
     }
     return ItemSequence_t(new EmptySequence());
   }
@@ -1173,7 +1222,7 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
     if(lPstmt == NULL)
-      throwError("SQLI0004", "prepared statement not valid");
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
 
     // And let the JSONItemSequence execute it
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
@@ -1195,7 +1244,7 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
     if(lPstmt == NULL)
-      throwError("SQLI0004", "prepared statement not valid");
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
 
     // And let the JSONItemSequence execute it
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
@@ -1218,7 +1267,7 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
     if(lPstmt == NULL)
-      throwError("SQLI0004", "prepared statement not valid");
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
 
     // And let the JSONItemSequence execute it
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));

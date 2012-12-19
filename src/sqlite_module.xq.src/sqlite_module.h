@@ -330,6 +330,9 @@ namespace zorba { namespace sqlite {
       static double
       strToDouble(std::string strcat);
 
+      static char *
+      getErrorMessage(std::string error);
+
   };
 
   class ConnectFunction : public SqliteFunction {

@@ -1,8 +1,11 @@
 import module namespace s = "http://www.zorba-xquery.com/modules/sqlite";
 
 let $db := s:connect("small2.db")
-let $comm := s:commit($db)
-let $roll := s:rollback($db)
-let $db := s:disconnect($db)
+
+return {
+  variable $comm := s:commit($db);
+  variable $roll := s:rollback($db);
+  variable $db := s:disconnect($db);
     
-return ( $comm = $roll, $comm = $db )
+  ( $comm = $roll, $comm = $db )
+}
