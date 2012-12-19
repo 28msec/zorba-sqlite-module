@@ -75,7 +75,7 @@ declare %an:sequential function s:connect(
  : Disconnects the passed sqlite database object.
  :
  : <p>The $conn argument provides the database encoded as xs:anyURI.
- : This parameter should define a sqlite database.
+ : This parameter should define a sqlite database.</p>
  :
  : @param $conn the database object encoded as xs:anyURI.
  :
