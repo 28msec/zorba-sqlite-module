@@ -28,6 +28,7 @@
 
 #include <sqlite3.h>
 #include <iostream>
+#include <stdio.h>
 
 #include "sqlite_module.h"
 
@@ -521,11 +522,11 @@ namespace zorba { namespace sqlite {
   double
   SqliteFunction::strToDouble(std::string str){
     double dDbl;
-    sscanf(str.c_str(), "%f", &dDbl);
+    sscanf(str.c_str(), "%lf", &dDbl);
     return dDbl;
   }
 
-  char *
+  const char *
   SqliteFunction::getErrorMessage(std::string error){
     if(error == "SQLI0001")
     {
@@ -654,7 +655,7 @@ namespace zorba { namespace sqlite {
     int aType, aSize;
     zorba::Item aKey;
     zorba::Item aValue;
-    std::vector<std::pair<zorba::Item, zorba::Item>> elements;
+    std::vector<std::pair<zorba::Item, zorba::Item> > elements;
     const char *aBlobPtr;
 
     if(theRc == SQLITE_ROW){
@@ -742,7 +743,7 @@ namespace zorba { namespace sqlite {
   bool JSONMetadataItemSequence::JSONMetadataIterator::next(zorba::Item& aItem){
     zorba::Item aKey;
     zorba::Item aValue;
-    std::vector<std::pair<zorba::Item, zorba::Item>> elements;
+    std::vector<std::pair<zorba::Item, zorba::Item> > elements;
     sqlite3 *lDbHandle;
     const char *lDbName;
     const char *lTableName;
