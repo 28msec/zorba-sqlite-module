@@ -879,7 +879,7 @@ namespace zorba { namespace sqlite {
       throwError("SQLI0002", getErrorMessage("SQLI0002"));
     }
 
-    return ItemSequence_t(new SingletonItemSequence(lItem));
+    return ItemSequence_t(new SingletonItemSequence(SqliteModule::getItemFactory()->createBoolean(true)));
   }
 
 /*******************************************************************************
