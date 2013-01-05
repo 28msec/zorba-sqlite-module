@@ -68,22 +68,6 @@ namespace zorba { namespace sqlite {
         destroy() throw();
   };
 
-
-/*  class C2SMap : public ExternalFunctionParameter
-  {
-    private:
-      typedef std::map<std::string, std::string> ConnToStmntMap_t;
-      C2SMap_t* c2sMap;
-
-    public:
-      CtoSMap();
-      virtual ~C2SMap();
-      bool storeC2S(const std::string&, const std::string&);
-      const std::string getC2S(const std::string&);
-      bool deleteC2S(const std::string&);
-      virtual void destroy() throw();
-  }; */
-
   class SqliteModule : public ExternalModule {
     protected:
       class ltstr
@@ -597,22 +581,6 @@ namespace zorba { namespace sqlite {
 
     virtual zorba::String
       getLocalName() const { return "close-prepared"; }
-
-    virtual zorba::ItemSequence_t
-      evaluate(const Arguments_t&,
-               const zorba::StaticContext*,
-               const zorba::DynamicContext*) const;
-    
-  };
-
-  class ExecutePreparedFunction : public SqliteFunction {
-  public:
-    ExecutePreparedFunction(const SqliteModule* aModule) : SqliteFunction(aModule) {}
-
-    virtual ~ExecutePreparedFunction() {}
-
-    virtual zorba::String
-      getLocalName() const { return "execute-prepared"; }
 
     virtual zorba::ItemSequence_t
       evaluate(const Arguments_t&,

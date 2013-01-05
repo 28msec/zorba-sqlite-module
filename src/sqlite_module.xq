@@ -81,7 +81,7 @@ declare %an:sequential function s:connect(
  :
  : @param $conn the database object encoded as xs:anyURI.
  :
- : @return true if everything went ok.
+ : @return nothing.
  :
  : @error s:SQLI0002 if $conn is not a valid SQLite database.
  : @error s:SQLI9999 if there was an internal error inside SQLite library.
@@ -327,20 +327,6 @@ declare %an:sequential function s:clear-params(
  :)
 declare %an:sequential function s:close-prepared(
   $pstmnt as xs:anyURI ) as empty-sequence() external;
-
-(:~
- : Execute a sql command (select or update command) over an already connected
- : SQLite database object.
- :
- : @param $pstmnt the query command to be executed as xs:anyURI.
- :
- : @return an id that defines a dataset object.
- :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
- :)
-declare %an:sequential function s:execute-prepared(
-  $pstmnt as xs:anyURI ) as object()* external;
   
 (:~
  : Execute a query (select command) over an already connected SQLite

@@ -8,9 +8,11 @@ return {
   variable $prep-statement := s:prepare-statement($db, "SELECT * FROM smalltable");
   variable $meta := s:metadata($prep-statement);
   variable $result := s:execute-query-prepared($prep-statement);
-  variable $old-db := s:disconnect($db);
-  (for $e in $meta
-    return concat($e("Database"), ":", $e("Table"), ":", $e("Column Name"), " = ", $e("Declared Type"), "; ")
+  variable $all-ok := s:disconnect($db);
+  variable $cols := $meta("columns");
+  
+  (for $i in 1 to jn:size($cols)
+    return concat($cols($i)("database"), ":", $cols($i)("table"), ":", $cols($i)("name"), " = ", $cols($i)("type"), "; ")
    ,
    for $e in $result
    return $e)

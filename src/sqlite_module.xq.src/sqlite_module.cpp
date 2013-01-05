@@ -110,10 +110,6 @@ namespace zorba { namespace sqlite {
       {
         lFunc = new ClosePreparedFunction(this);
       }
-      else if (localName == "execute-prepared")
-      {
-        lFunc = new ExecutePreparedFunction(this);
-      }
       else if (localName == "execute-query-prepared")
       {
         lFunc = new ExecuteQueryPreparedFunction(this);
@@ -1246,28 +1242,6 @@ namespace zorba { namespace sqlite {
     // Once we got the prepared statement just get rid of it
     stmtMap->deleteStmt(lItemUUID.getStringValue().str());
     return ItemSequence_t(new EmptySequence());
-  }
-
-/*******************************************************************************
- ******************************************************************************/
-  zorba::ItemSequence_t
-    ExecutePreparedFunction::evaluate(
-    const Arguments_t& aArgs,
-    const zorba::StaticContext* aSctx,
-    const zorba::DynamicContext* aDctx) const 
-  {
-    sqlite3_stmt *lPstmt;
-    StmtMap *stmtMap = getStatementMap(aDctx);
-    Item lItemUUID = getOneItem(aArgs, 0);
-
-    // Get the prepared statement
-    lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
-    if(lPstmt == NULL)
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
-
-    // And let the JSONItemSequence execute it
-    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
-    return ItemSequence_t(lSeq.release());
   }
 
 /*******************************************************************************
