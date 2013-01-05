@@ -5,7 +5,7 @@ let $db := s:connect("small2.db")
 return {
   variable $comm := s:commit($db);
   variable $roll := s:rollback($db);
-  variable $db := s:disconnect($db);
+  variable $all-ok := s:disconnect($db);
     
-  ( $comm = $roll, $comm = $db )
+  $comm = $roll
 }

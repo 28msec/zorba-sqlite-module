@@ -66,10 +66,6 @@ namespace zorba { namespace sqlite {
       {
         lFunc = new RollbackFunction(this);
       }
-      else if (localName == "execute")
-      {
-        lFunc = new ExecuteFunction(this);
-      }
       else if (localName == "execute-query")
       {
         lFunc = new ExecuteQueryFunction(this);
@@ -110,6 +106,10 @@ namespace zorba { namespace sqlite {
       {
         lFunc = new ClearParamsFunction(this);
       }
+      else if (localName == "close-prepared")
+      {
+        lFunc = new ClosePreparedFunction(this);
+      }
       else if (localName == "execute-prepared")
       {
         lFunc = new ExecutePreparedFunction(this);
@@ -146,9 +146,10 @@ namespace zorba { namespace sqlite {
    *       ConnMap       *
    ***********************/
 
-  ConnMap::ConnMap()
+  ConnMap::ConnMap(StmtMap* stmtMap)
   {
     ConnMap::connMap = new ConnMap_t();
+    sMap = stmtMap;
   }
 
   bool 
@@ -179,7 +180,10 @@ namespace zorba { namespace sqlite {
 
     if(lIter == connMap->end())
       return false;
-
+      
+    if(sMap != NULL)
+      sMap->deleteAllForConn(lIter->second);
+    sqlite3_close(lIter->second);
     connMap->erase(lIter);
     return true;
   }
@@ -189,19 +193,20 @@ namespace zorba { namespace sqlite {
   {
     if(connMap)
     {
+      if(sMap)
+        sMap->deleteAllForConn(NULL); // delete all prep-statements
+        
       for (ConnMap_t::const_iterator lIter = connMap->begin();
            lIter != connMap->end(); ++lIter)
       {
-        if(lIter->second != NULL)
-          sqlite3_close(lIter->second);
-        //deleteConn(lIter->first);
+        sqlite3_close(lIter->second);
       }
       connMap->clear();
       delete connMap;
     }
     delete this;
   }
-
+  
   ConnMap::~ConnMap(){ }
 
 /***********************
@@ -254,13 +259,28 @@ namespace zorba { namespace sqlite {
       for (StmtMap_t::const_iterator lIter = stmtMap->begin();
            lIter != stmtMap->end(); ++lIter)
       {
-        if(lIter->second != NULL)
-          sqlite3_finalize(lIter->second);
+        sqlite3_finalize(lIter->second);
       }
       stmtMap->clear();
       delete stmtMap;
     }
     delete this;
+  }
+  
+  void
+  StmtMap::deleteAllForConn(sqlite3* c)
+  {
+    StmtMap_t::iterator it;
+    for(it = stmtMap->begin();
+        it != stmtMap->end(); )
+    {
+      if((c == NULL) || (sqlite3_db_handle(it->second) == c))
+      {
+        sqlite3_finalize(it->second);
+        stmtMap->erase(it++);
+      } else
+        it++;
+    }
   }
 
   StmtMap::~StmtMap(){ }
@@ -277,9 +297,11 @@ namespace zorba { namespace sqlite {
   SqliteFunction::getConnectionMap(const zorba::DynamicContext* aDctx){
     DynamicContext* lDynCtx = const_cast<DynamicContext*>(aDctx);
     ConnMap* lConnMap;
+    StmtMap* lStmtMap;
     if(!(lConnMap = dynamic_cast<ConnMap*>(lDynCtx->getExternalFunctionParameter("sqliteConnMap"))))
     {
-      lConnMap = new ConnMap();
+      lStmtMap = getStatementMap(lDynCtx);
+      lConnMap = new ConnMap(lStmtMap);
       lDynCtx->addExternalFunctionParameter("sqliteConnMap", lConnMap);     
     }
     return lConnMap;
@@ -585,7 +607,6 @@ namespace zorba { namespace sqlite {
     Item lItemJSONKey;
 
     Iterator_t lIterKeys = aOptions.getObjectKeys();
-    store::StoreConsts::JSONItemKind lJSONK = aOptions.getJSONItemKind();
     lIterKeys->open();
     while (lIterKeys->next(lItemJSONKey))
     {
@@ -770,28 +791,28 @@ namespace zorba { namespace sqlite {
                                     &lAutoinc);
       if(lRc != 0)
         SqliteFunction::throwError(0, sqlite3_errmsg(lDbHandle));
-      aKey = theFactory->createString("Database");
-      aValue = theFactory->createString(lDbName);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("Table");
-      aValue = theFactory->createString(lTableName);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("Column Name");
+      aKey = theFactory->createString("name");
       aValue = theFactory->createString(lOriginName);
       elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("Declared Type");
+      aKey = theFactory->createString("database");
+      aValue = theFactory->createString(lDbName);
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
+      aKey = theFactory->createString("table");
+      aValue = theFactory->createString(lTableName);
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
+      aKey = theFactory->createString("type");
       aValue = theFactory->createString(lDataType);
       elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("Collation");
+      aKey = theFactory->createString("collation");
       aValue = theFactory->createString(lCollSequence);
       elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("Not Null");
+      aKey = theFactory->createString("nullable");
       aValue = theFactory->createBoolean((lNotNull==0)?false:true);
       elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("Primary Key");
+      aKey = theFactory->createString("primary key");
       aValue = theFactory->createBoolean((lPrimaryKey==0)?false:true);
       elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("Autoinc");
+      aKey = theFactory->createString("autoincrement");
       aValue = theFactory->createBoolean((lAutoinc==0)?false:true);
       elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
       aItem = theFactory->createJSONObject(elements);
@@ -879,7 +900,7 @@ namespace zorba { namespace sqlite {
       throwError("SQLI0002", getErrorMessage("SQLI0002"));
     }
 
-    return ItemSequence_t(new SingletonItemSequence(SqliteModule::getItemFactory()->createBoolean(true)));
+    return ItemSequence_t(new EmptySequence());
   }
 
 /*******************************************************************************
@@ -948,28 +969,6 @@ namespace zorba { namespace sqlite {
 /*******************************************************************************
  ******************************************************************************/
   zorba::ItemSequence_t
-    ExecuteFunction::evaluate(
-    const Arguments_t& aArgs,
-    const zorba::StaticContext* aSctx,
-    const zorba::DynamicContext* aDctx) const 
-  {
-    sqlite3_stmt *lPstmt;
-    Item lItemUUID = getOneItem(aArgs, 0);
-    Item lItemQry = getOneItem(aArgs, 1);
-
-    // Create the prepared statement with the UUID and Query passed
-    lPstmt = createPreparedStatement(aDctx, lItemUUID.getStringValue().str(),
-      lItemQry.getStringValue().str());
-
-    // Once we got the SQL Query executed just pass it to the JSON Sequence
-    // so it will return what we need to the user
-    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
-    return ItemSequence_t(lSeq.release());
-  }
-
-/*******************************************************************************
- ******************************************************************************/
-  zorba::ItemSequence_t
     ExecuteQueryFunction::evaluate(
     const Arguments_t& aArgs,
     const zorba::StaticContext* aSctx,
@@ -1031,11 +1030,17 @@ namespace zorba { namespace sqlite {
     const zorba::DynamicContext* aDctx) const 
   {
     sqlite3_stmt *lPstmt;
-    Item lItemPstmt = getOneItem(aArgs, 0);
-    StmtMap *stmtMap = getStatementMap(aDctx);
+    zorba::Item lItemPstmt = getOneItem(aArgs, 0);
+    zorba::Item lVecItem, lJSONKey, lJSONArray, lJSONRes;
+    StmtMap *lStmtMap = getStatementMap(aDctx);
+    std::vector<zorba::Item> lItems;
+    std::vector<std::pair<zorba::Item, zorba::Item> > lVectorRes;
+    ItemFactory* lFactory;
+    Iterator_t lIter;
 
+    lFactory = SqliteModule::getItemFactory();
     // Get the prepared statement
-    lPstmt = stmtMap->getStmt(lItemPstmt.getStringValue().str());
+    lPstmt = lStmtMap->getStmt(lItemPstmt.getStringValue().str());
     if(lPstmt == NULL){
       // No valid prepared statement id passed
       throwError("SQLI0004", getErrorMessage("SQLI0004"));
@@ -1044,7 +1049,19 @@ namespace zorba { namespace sqlite {
     // So now create a JSONMetadataItemSequence and let it
     // get us what we need
     std::auto_ptr<JSONMetadataItemSequence> lSeq(new JSONMetadataItemSequence(lPstmt));
-    return ItemSequence_t(lSeq.release());
+    lIter = lSeq->getIterator();
+    lIter->open();
+    while(lIter->next(lVecItem))
+    {
+      lItems.push_back(lVecItem);
+    }
+    lIter->close();
+    lJSONArray = lFactory->createJSONArray(lItems);
+    lJSONKey = lFactory->createString(std::string("columns"));
+    lVectorRes.push_back(std::pair<Item, Item>(lJSONKey, lJSONArray));
+    lJSONRes = lFactory->createJSONObject(lVectorRes);
+    
+    return ItemSequence_t(new SingletonItemSequence(lJSONRes));
   }
 
 /*******************************************************************************
@@ -1205,6 +1222,29 @@ namespace zorba { namespace sqlite {
     Item lItemUUID = getOneItem(aArgs, 0);
 
     clearValues(aDctx, lItemUUID.getStringValue().str());
+    return ItemSequence_t(new EmptySequence());
+  }
+  
+/*******************************************************************************
+ ******************************************************************************/
+  zorba::ItemSequence_t
+    ClosePreparedFunction::evaluate(
+    const Arguments_t& aArgs,
+    const zorba::StaticContext* aSctx,
+    const zorba::DynamicContext* aDctx) const 
+  { 
+    sqlite3_stmt *lPstmt;
+    Item lItemUUID = getOneItem(aArgs, 0);
+    StmtMap* stmtMap;
+
+    // get the prepared statement
+    stmtMap = getStatementMap(aDctx);
+    lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
+    if(lPstmt == NULL)
+      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+
+    // Once we got the prepared statement just get rid of it
+    stmtMap->deleteStmt(lItemUUID.getStringValue().str());
     return ItemSequence_t(new EmptySequence());
   }
 

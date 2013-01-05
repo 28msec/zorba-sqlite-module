@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-
-//#ifndef ORG_EXPATH_NS_ARCHIVE_H_
-//#define ORG_EXPATH_NS_ARCHIVE_H_
-
 #include <map>
 #include <set>
 
@@ -32,31 +28,12 @@ namespace zorba { namespace sqlite {
 
 /*******************************************************************************
  ******************************************************************************/
-  class ConnMap : public ExternalFunctionParameter
-  {
-    private:
-      typedef std::map<std::string, sqlite3 *> ConnMap_t;
-      ConnMap_t* connMap;
-
-    public:
-      ConnMap();
-      virtual ~ConnMap();
-      bool 
-        storeConn(const std::string&, sqlite3 *sql);
-      sqlite3*
-        getConn(const std::string&);
-      bool 
-        deleteConn(const std::string&);
-      virtual void 
-        destroy() throw();
-  };
-
   class StmtMap : public ExternalFunctionParameter
   {
     private:
       typedef std::map<std::string, sqlite3_stmt *> StmtMap_t;
       StmtMap_t* stmtMap;
-
+    
     public:
       StmtMap();
       virtual ~StmtMap();
@@ -68,7 +45,44 @@ namespace zorba { namespace sqlite {
         deleteStmt(const std::string&);
       virtual void 
         destroy() throw();
+      void deleteAllForConn(sqlite3* c);
   };
+  
+  class ConnMap : public ExternalFunctionParameter
+  {
+    private:
+      typedef std::map<std::string, sqlite3 *> ConnMap_t;
+      ConnMap_t* connMap;
+      StmtMap* sMap;
+
+    public:
+      ConnMap(StmtMap* sMap);
+      virtual ~ConnMap();
+      bool 
+        storeConn(const std::string&, sqlite3 *sql);
+      sqlite3*
+        getConn(const std::string&);
+      bool 
+        deleteConn(const std::string&);
+      virtual void 
+        destroy() throw();
+  };
+
+
+/*  class C2SMap : public ExternalFunctionParameter
+  {
+    private:
+      typedef std::map<std::string, std::string> ConnToStmntMap_t;
+      C2SMap_t* c2sMap;
+
+    public:
+      CtoSMap();
+      virtual ~C2SMap();
+      bool storeC2S(const std::string&, const std::string&);
+      const std::string getC2S(const std::string&);
+      bool deleteC2S(const std::string&);
+      virtual void destroy() throw();
+  }; */
 
   class SqliteModule : public ExternalModule {
     protected:
@@ -228,16 +242,16 @@ namespace zorba { namespace sqlite {
     SqliteOptions();
 
     const bool
-    getOpenReadOnly() const { return theOpenReadOnly; }
+    getOpenReadOnly() { return theOpenReadOnly; }
 
     const bool
-    getOpenCreate() const { return theOpenCreate; }
+    getOpenCreate() { return theOpenCreate; }
 
     const bool
-    getOpenNoMutex() const { return theOpenNoMutex; }
+    getOpenNoMutex() { return theOpenNoMutex; }
 
     const bool
-    getOpenSharedCache() const { return theOpenSharedCache; }
+    getOpenSharedCache() { return theOpenSharedCache; }
 
     void
     setValues(Item&);
@@ -415,22 +429,6 @@ namespace zorba { namespace sqlite {
     
   };
 
-  class ExecuteFunction : public SqliteFunction {
-  public:
-    ExecuteFunction(const SqliteModule* aModule) : SqliteFunction(aModule) {}
-
-    virtual ~ExecuteFunction() {}
-
-    virtual zorba::String
-      getLocalName() const { return "execute"; }
-
-    virtual zorba::ItemSequence_t
-      evaluate(const Arguments_t&,
-               const zorba::StaticContext*,
-               const zorba::DynamicContext*) const;
-    
-  };
-
   class ExecuteQueryFunction : public SqliteFunction {
   public:
     ExecuteQueryFunction(const SqliteModule* aModule) : SqliteFunction(aModule) {}
@@ -590,6 +588,22 @@ namespace zorba { namespace sqlite {
                const zorba::DynamicContext*) const;
     
   };
+  
+  class ClosePreparedFunction : public SqliteFunction {
+  public:
+    ClosePreparedFunction(const SqliteModule* aModule) : SqliteFunction(aModule) {}
+
+    virtual ~ClosePreparedFunction() {}
+
+    virtual zorba::String
+      getLocalName() const { return "close-prepared"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate(const Arguments_t&,
+               const zorba::StaticContext*,
+               const zorba::DynamicContext*) const;
+    
+  };
 
   class ExecutePreparedFunction : public SqliteFunction {
   public:
@@ -641,13 +655,3 @@ namespace zorba { namespace sqlite {
 
 } /* namespace sqlite  */ } /* namespace zorba */
 
-//namespace std {
-//
-//ostream&
-//operator<<(
-//    ostream& out,
-//    const zorba::sqlite::SqliteFunction::JSONEntry& e);
-//
-//}
-
-//#endif // _ORG_EXPATH_WWW_NS_ARCHIVE_H_

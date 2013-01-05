@@ -31,6 +31,20 @@ declare namespace ver = "http://www.zorba-xquery.com/options/versioning";
 declare option ver:module-version "1.0";
 
 (:~
+ : Connect to a SQLite database.
+ :
+ : @param $db-name the SQLite database name to be opened as xs:string.
+ :
+ : @return the SQLite database object as xs:anyURI.
+ :
+ : @error s:SQLI0001 if the databse name doesn't exist or it couldn't be opened.
+ : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ :)
+declare %an:sequential function s:connect(
+  $db-name as xs:string
+  ) as xs:anyURI external;
+
+(:~
  : Connect to a SQLite database with optional options.
  : All options are true/false values. Available options are: open-read-only,
  : open-create, open-no-mutex, and open-shared-cache.
@@ -73,7 +87,7 @@ declare %an:sequential function s:connect(
  : @error s:SQLI9999 if there was an internal error inside SQLite library.
  :)
 declare %an:sequential function s:disconnect(
-  $conn as xs:anyURI ) as xs:boolean external; 
+  $conn as xs:anyURI ) as empty-sequence() external; 
   
 (:~
  : Returns whether on not the passed SQLite database object is connected.
@@ -115,23 +129,6 @@ declare %an:sequential function s:rollback(
   $conn as xs:anyURI ) as xs:anyURI external;
   
 (:~
- : Executes a sql command (select or update command) over an already opened
- : SQLite database object.
- :
- : @param $conn an already opened SQLite database object as xs:anyURI.
- : @param $sqlstr the sql statement to be executed as xs:string.
- :
- : @return an id that defines a dataset object.
- :
- : @error s:SQLI0002 if $conn is not a valid SQLite database object.
- : @error s:SQLI0003 if $stmnt is not a valid sql command.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
- :)
-declare %an:sequential function s:execute(
-  $conn as xs:anyURI,
-  $sqlstr as xs:string ) as object()* external;
-  
-(:~
  : Executes a query (select command) over an already opened SQLite database
  : object.
  :
@@ -167,15 +164,33 @@ declare %an:sequential function s:execute-update(
 (:~
  : Returns the metadata associated to a given prepared SQLite statement.
  :
- : @param $pstmnt the update command to be executed as xs:anyURI.
+ : <p>SQLite metadata is returned in the following form:
+ : <pre>
+ : {
+ :   "columns" : 
+ :       [{
+ :           "name"          : <column name>,
+ :           "table"         : <table name>,
+ :           "database"      : <database name>,
+ :           "type"          : <type name>,
+ :           "collation"     : [BINARY|NOCASE|RTRIM],
+ :           "nullable"      : [true|false],
+ :           "primary key"   : [true|false],
+ :           "autoincrement" : [true|false]
+ :       }*]
+ : }
+ : </pre>
+ : </p>
  :
- : @return a sequence with the associated the metadata.
+ : @param $pstmnt the sql command as xs:anyURI from which metadata will be extracted.
+ :
+ : @return a object() with the associated the metadata.
  :
  : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
  : @error s:SQLI9999 if there was an internal error inside SQLite library.
  :)
 declare %an:sequential function s:metadata(
-  $pstmnt as xs:anyURI ) as object()* external;
+  $pstmnt as xs:anyURI ) as object() external;
   
 (:~
  : Compiles a prepared statement based on an already connected SQLite database
@@ -301,6 +316,18 @@ declare %an:sequential function s:set-null(
 declare %an:sequential function s:clear-params(
   $pstmnt as xs:anyURI ) as empty-sequence() external;
   
+(:~
+ : Close and free resources associated to a prepared statement.
+ :
+ : @param $pstmnt the prepared statement to be closed.
+ :
+ : @return nothing.
+ :
+ : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
+ :)
+declare %an:sequential function s:close-prepared(
+  $pstmnt as xs:anyURI ) as empty-sequence() external;
+
 (:~
  : Execute a sql command (select or update command) over an already connected
  : SQLite database object.
