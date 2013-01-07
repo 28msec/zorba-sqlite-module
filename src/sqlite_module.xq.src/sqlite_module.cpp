@@ -195,7 +195,6 @@ namespace zorba { namespace sqlite {
       for (ConnMap_t::iterator lIter = connMap->begin();
            lIter != connMap->end(); )
       {
-        std::cout << "ConnMap::destroy() -- closing connection " << lIter->second << std::endl;
         sqlite3_close(lIter->second);
         connMap->erase(lIter++);
       }
@@ -335,7 +334,6 @@ namespace zorba { namespace sqlite {
     const char *lTail;
     ConnMap* lConnMap = SqliteFunction::getConnectionMap(aDctx);
 
-    //std::cout << "Query or Update: " << aQry << std::endl;
     lDb = lConnMap->getConn(aUUID);
     if(lDb == NULL){
       // throw error, ID not recognized
@@ -437,7 +435,7 @@ namespace zorba { namespace sqlite {
     if(lPstmt == NULL){
       throwError("SQLI0004", getErrorMessage("SQLI0004"));
     }
-    lRc = sqlite3_bind_text(lPstmt, aPos, aVal.c_str(), aVal.size(), SQLITE_STATIC);
+    lRc = sqlite3_bind_text(lPstmt, aPos, aVal.c_str(), aVal.size(), SQLITE_TRANSIENT);
     if(lRc == SQLITE_RANGE)
       throwError("SQLI0005", getErrorMessage("SQLI0005"));
     else
@@ -1191,7 +1189,7 @@ namespace zorba { namespace sqlite {
     Item lItemUUID = getOneItem(aArgs, 0);
     Item lItemPos = getOneItem(aArgs, 1);
     Item lItemString = getOneItem(aArgs, 2);
-
+    
     setValueToStatement(aDctx, lItemUUID.getStringValue().str(), strToInt(lItemPos.getStringValue().str()), lItemString.getStringValue().str());
     return ItemSequence_t(new EmptySequence());
   }
