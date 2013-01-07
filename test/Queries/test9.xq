@@ -14,7 +14,8 @@ for $e in $xml//food
 let $name := $e//name
 let $calories := $e//calories
 return {
+  s:clear-params($prep-stmt);
   s:set-string($prep-stmt, 1, $name);
   s:set-string($prep-stmt, 2, $calories);
-  s:execute-update-prepared($prep-stmt)
+  {"Affected Rows" : s:execute-update-prepared($prep-stmt)}
 }

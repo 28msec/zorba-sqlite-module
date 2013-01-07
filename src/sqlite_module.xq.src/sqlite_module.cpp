@@ -192,12 +192,14 @@ namespace zorba { namespace sqlite {
       if(sMap)
         sMap->deleteAllForConn(NULL); // delete all prep-statements
         
-      for (ConnMap_t::const_iterator lIter = connMap->begin();
-           lIter != connMap->end(); ++lIter)
+      for (ConnMap_t::iterator lIter = connMap->begin();
+           lIter != connMap->end(); )
       {
+        std::cout << "ConnMap::destroy() -- closing connection " << lIter->second << std::endl;
         sqlite3_close(lIter->second);
+        connMap->erase(lIter++);
       }
-      connMap->clear();
+ //     connMap->clear();
       delete connMap;
     }
     delete this;
@@ -252,12 +254,13 @@ namespace zorba { namespace sqlite {
   {
     if(stmtMap)
     {
-      for (StmtMap_t::const_iterator lIter = stmtMap->begin();
-           lIter != stmtMap->end(); ++lIter)
+      for (StmtMap_t::iterator lIter = stmtMap->begin();
+           lIter != stmtMap->end(); )
       {
         sqlite3_finalize(lIter->second);
+        stmtMap->erase(lIter++);
       }
-      stmtMap->clear();
+      //stmtMap->clear();
       delete stmtMap;
     }
     delete this;
@@ -468,18 +471,13 @@ namespace zorba { namespace sqlite {
   {
     sqlite3_stmt *lPstmt;
     StmtMap *stmtMap = getStatementMap(aDctx);
-    int lRc, aPos = 1;
-
-    // go over all the parameters in the prepared statement
-    // and set them to null
+    	
+    // get the prepared statement if exists
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
       throwError("SQLI0004", getErrorMessage("SQLI0004"));
     }
-    do {
-      lRc = sqlite3_bind_null(lPstmt, aPos);
-      aPos++;
-    } while(lRc != SQLITE_RANGE);
+    sqlite3_clear_bindings(lPstmt);
   }
 
   String 
@@ -661,9 +659,12 @@ namespace zorba { namespace sqlite {
       theFactory = Zorba::getInstance(0)->getItemFactory();
 
       theColumnCount = sqlite3_column_count(theStmt);
-      theColumnNames = new std::string[theColumnCount];
-      for(int i=0; i<theColumnCount; i++){
-        theColumnNames[i] = sqlite3_column_name(theStmt, i);
+      if(theColumnCount > 0)
+      {
+        theColumnNames = new std::string[theColumnCount];
+        for(int i=0; i<theColumnCount; i++){
+          theColumnNames[i] = sqlite3_column_name(theStmt, i);
+        }
       }
     }
   }
@@ -727,8 +728,9 @@ namespace zorba { namespace sqlite {
   void JSONItemSequence::JSONIterator::close(){
     // Set the Rc to "no more data" and clear the variables
     theRc = SQLITE_ERROR;
+    if((theColumnCount > 0) && theColumnNames)
+      delete[] theColumnNames;
     theColumnCount = 0;
-    delete[] theColumnNames;
     if(theStmt != NULL)
       sqlite3_reset(theStmt);
   }
@@ -744,14 +746,15 @@ namespace zorba { namespace sqlite {
       theFactory = Zorba::getInstance(0)->getItemFactory();
 
       theColumnCount = sqlite3_column_count(theStmt);
-      theColumnNames = new std::string[theColumnCount];
-      theActualColumn = 0;
-      for(int i=0; i<theColumnCount; i++){
-        theColumnNames[i] = sqlite3_column_name(theStmt, i);
-      }
       if(theColumnCount > 0)
+      {
+        theColumnNames = new std::string[theColumnCount];
+        theActualColumn = 0;
+        for(int i=0; i<theColumnCount; i++){
+          theColumnNames[i] = sqlite3_column_name(theStmt, i);
+        }
         theRc = SQLITE_ROW;
-      else
+      } else
         theRc = SQLITE_ERROR;
     } else
       theRc = SQLITE_ERROR;
@@ -890,7 +893,8 @@ namespace zorba { namespace sqlite {
     lSqldb = lConnMap->getConn(lItem.getStringValue().str());
     if(lSqldb != NULL){
       // In case we have it connected, disconnect it
-      sqlite3_close(lSqldb);
+      //sqlite3_close(lSqldb);
+      lConnMap->deleteConn(lItem.getStringValue().str());
     } else {
       // throw error, UUID not recognized
       throwError("SQLI0002", getErrorMessage("SQLI0002"));
