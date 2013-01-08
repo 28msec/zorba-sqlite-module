@@ -76,7 +76,7 @@ declare %an:sequential function s:connect(
 (:~
  : Disconnects the passed SQLite database object.
  :
- : <p>The $conn argument provides the database encoded as xs:anyURI.
+ : The $conn argument provides the database encoded as xs:anyURI.
  : This parameter should define a SQLite database.
  :
  : @param $conn the database object encoded as xs:anyURI.
@@ -169,10 +169,10 @@ declare %an:sequential function s:execute-update(
  : {
  :   "columns" : 
  :       [{
- :           "name"          : <column name>,
- :           "table"         : <table name>,
- :           "database"      : <database name>,
- :           "type"          : <type name>,
+ :           "name"          : &lt;column name>,
+ :           "table"         : &lt;table name>,
+ :           "database"      : &lt;database name>,
+ :           "type"          : &lt;type name>,
  :           "collation"     : [BINARY|NOCASE|RTRIM],
  :           "nullable"      : [true|false],
  :           "primary key"   : [true|false],
