@@ -915,8 +915,10 @@ namespace zorba { namespace sqlite {
       lDbName = std::string(":memory:");
     lRc = sqlite3_open_v2(lDbName.c_str(), &lSqldb, lOptions.getOptionsAsInt(), NULL);
     if(lRc == SQLITE_CANTOPEN)
+    {
+      sqlite3_close(lSqldb);
       throwError("SQLI0001", getErrorMessage("SQLI0001"));
-    else
+    } else
       checkForError(lRc, 0, lSqldb);
 
     // Store the UUID for this connection and return it
