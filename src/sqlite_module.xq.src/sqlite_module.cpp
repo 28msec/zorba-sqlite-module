@@ -244,6 +244,7 @@ namespace zorba { namespace sqlite {
     if(lIter == stmtMap->end())
       return false;
 
+    sqlite3_finalize(lIter->second);
     stmtMap->erase(lIter);
     return true;
   }
@@ -259,7 +260,6 @@ namespace zorba { namespace sqlite {
         sqlite3_finalize(lIter->second);
         stmtMap->erase(lIter++);
       }
-      //stmtMap->clear();
       delete stmtMap;
     }
     delete this;
