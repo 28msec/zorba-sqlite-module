@@ -785,12 +785,8 @@ namespace zorba { namespace sqlite {
       delete[] theColumnNames;
     }
     theColumnCount = 0;
-    if(theStmt != NULL){
-      if(isLongTerm)
-        sqlite3_reset(theStmt);
-      else
-        sqlite3_finalize(theStmt);
-    }
+    if(theStmt != NULL)
+      sqlite3_reset(theStmt);
   }
 
 /*******************************************************************************
@@ -1030,14 +1026,18 @@ namespace zorba { namespace sqlite {
     sqlite3_stmt *lPstmt;
     Item lItemUUID = getOneItem(aArgs, 0);
     Item lItemQry = getOneItem(aArgs, 1);
+    StmtMap *stmtMap = getStatementMap(aDctx);
+    std::string lStrUUID;
 
     // Create the prepared statement with the UUID and Query passed
     lPstmt = createPreparedStatement(aDctx, lItemUUID.getStringValue().str(),
       lItemQry.getStringValue().str());
+    lStrUUID = createUUID();
+    stmtMap->storeStmt(lStrUUID, lPstmt);
 
     // Once we got the SQL Query executed just pass it to the JSON Sequence
     // so it will return what we need to the user
-    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt, false));
+    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
     return ItemSequence_t(lSeq.release());
   }
 
@@ -1054,14 +1054,18 @@ namespace zorba { namespace sqlite {
     Item lItemQry = getOneItem(aArgs, 1);
     Item lItemRes;
     Item lItemJSONKey;
+    StmtMap *stmtMap = getStatementMap(aDctx);
+    std::string lStrUUID;
 
     // Create the prepared statement with the UUID and Query passed
     lPstmt = createPreparedStatement(aDctx, lItemUUID.getStringValue().str(),
       lItemQry.getStringValue().str());
+    lStrUUID = createUUID();
+    stmtMap->storeStmt(lStrUUID, lPstmt);
 
     // Once we got the SQL Query executed just pass it to the JSON Sequence
     // after we get the result we convert it to a integer Item
-    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt, false));
+    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
     Iterator_t lIter = lSeq->getIterator();
     lIter->open();
     lIter->next(lItemRes);

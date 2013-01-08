@@ -119,13 +119,12 @@ namespace zorba { namespace sqlite {
           int theColumnCount;
           int theRc;
           bool isUpdateResult;
-          bool isLongTerm;
           zorba::ItemFactory* theFactory;
 
         public:
-          JSONIterator(sqlite3_stmt* aPrepStmt, bool aLongTerm):
+          JSONIterator(sqlite3_stmt* aPrepStmt):
               theStmt(aPrepStmt),theColumnNames(NULL),theColumnCount(0),
-              theRc(0),isUpdateResult(false),isLongTerm(aLongTerm) {}
+              theRc(0),isUpdateResult(false) {}
 
           virtual ~JSONIterator() {
           }
@@ -145,17 +144,16 @@ namespace zorba { namespace sqlite {
 
     protected:
       sqlite3_stmt* thePrepStmt;
-      bool isLongTerm;
 
     public:
-      JSONItemSequence(sqlite3_stmt* aPrepStmt, bool aLongTerm=true)
-        : thePrepStmt(aPrepStmt), isLongTerm(aLongTerm)
+      JSONItemSequence(sqlite3_stmt* aPrepStmt)
+        : thePrepStmt(aPrepStmt)
       {}
 
       virtual ~JSONItemSequence() {}
 
       zorba::Iterator_t 
-        getIterator() { return new JSONIterator(thePrepStmt, isLongTerm); }
+        getIterator() { return new JSONIterator(thePrepStmt); }
   };
 
 /*******************************************************************************
