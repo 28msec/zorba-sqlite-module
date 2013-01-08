@@ -914,16 +914,13 @@ namespace zorba { namespace sqlite {
     if(lDbName == "")
       lDbName = std::string(":memory:");
     lRc = sqlite3_open_v2(lDbName.c_str(), &lSqldb, lOptions.getOptionsAsInt(), NULL);
-    if(lRc == SQLITE_CANTOPEN)
-    {
-      sqlite3_close(lSqldb);
-      throwError("SQLI0001", getErrorMessage("SQLI0001"));
-    } else
-      checkForError(lRc, 0, lSqldb);
-
     // Store the UUID for this connection and return it
     lStrUUID = createUUID();
     lConnMap->storeConn(lStrUUID, lSqldb);
+    if(lRc == SQLITE_CANTOPEN)
+      throwError("SQLI0001", getErrorMessage("SQLI0001"));
+    else
+      checkForError(lRc, 0, lSqldb);
 
     return ItemSequence_t(new SingletonItemSequence(SqliteModule::getItemFactory()->createAnyURI(lStrUUID)));
   }
@@ -944,7 +941,6 @@ namespace zorba { namespace sqlite {
     lSqldb = lConnMap->getConn(lItem.getStringValue().str());
     if(lSqldb != NULL){
       // In case we have it connected, disconnect it
-      //sqlite3_close(lSqldb);
       lConnMap->deleteConn(lItem.getStringValue().str());
     } else {
       // throw error, UUID not recognized
