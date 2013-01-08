@@ -115,19 +115,17 @@ namespace zorba { namespace sqlite {
       {
         protected:
           sqlite3_stmt* theStmt;
-          std::string* theColumnNames;
+          char** theColumnNames;
           int theColumnCount;
           int theRc;
           bool isUpdateResult;
-          // needed if theArchiveItem is not streamable an needs to be decoded
-          // zorba::String   theDecodedData;
-
+          bool isLongTerm;
           zorba::ItemFactory* theFactory;
 
         public:
-          JSONIterator(sqlite3_stmt* aPrepStmt):
+          JSONIterator(sqlite3_stmt* aPrepStmt, bool aLongTerm):
               theStmt(aPrepStmt),theColumnNames(NULL),theColumnCount(0),
-              theRc(0),isUpdateResult(false) {}
+              theRc(0),isUpdateResult(false),isLongTerm(aLongTerm) {}
 
           virtual ~JSONIterator() {
           }
@@ -147,16 +145,17 @@ namespace zorba { namespace sqlite {
 
     protected:
       sqlite3_stmt* thePrepStmt;
+      bool isLongTerm;
 
     public:
-      JSONItemSequence(sqlite3_stmt* aPrepStmt)
-        : thePrepStmt(aPrepStmt)
+      JSONItemSequence(sqlite3_stmt* aPrepStmt, bool aLongTerm=true)
+        : thePrepStmt(aPrepStmt), isLongTerm(aLongTerm)
       {}
 
       virtual ~JSONItemSequence() {}
 
       zorba::Iterator_t 
-        getIterator() { return new JSONIterator(thePrepStmt); }
+        getIterator() { return new JSONIterator(thePrepStmt, isLongTerm); }
   };
 
 /*******************************************************************************
@@ -168,18 +167,14 @@ namespace zorba { namespace sqlite {
       {
         protected:
           sqlite3_stmt* theStmt;
-          std::string* theColumnNames;
           int theColumnCount;
           int theRc;
           int theActualColumn;
-          // needed if theArchiveItem is not streamable an needs to be decoded
-          // zorba::String   theDecodedData;
-
           zorba::ItemFactory* theFactory;
 
         public:
           JSONMetadataIterator(sqlite3_stmt* aPrepStmt):
-              theStmt(aPrepStmt),theColumnNames(NULL),theColumnCount(0),
+              theStmt(aPrepStmt),theColumnCount(0),
               theRc(0), theActualColumn(0) {}
 
           virtual ~JSONMetadataIterator() {
@@ -245,6 +240,9 @@ namespace zorba { namespace sqlite {
 
     int
     getOptionsAsInt();
+    
+    std::string
+    getOptionsAsString();
 
   protected:
     static std::string

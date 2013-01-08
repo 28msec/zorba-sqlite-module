@@ -643,6 +643,53 @@ namespace zorba { namespace sqlite {
       opts |= SQLITE_OPEN_SHAREDCACHE;
     return opts;
   }
+  
+  std::string
+  SqliteOptions::getOptionsAsString(){
+    std::string res;
+    bool somethingthere = false;
+    if(theOpenCreate)
+    {
+      res += "SQLITE_OPEN_CREATE";
+      somethingthere = true;
+    }
+    if(theOpenReadOnly)
+    {
+      if(somethingthere)
+      {
+        res += " | ";
+      }
+      res += "SQLITE_OPEN_READONLY";
+      somethingthere = true;
+    }
+    else
+    {
+      if(somethingthere)
+      {
+        res += " | ";
+      }
+      res += "SQLITE_OPEN_READWRITE";
+      somethingthere = true;
+    }
+    if(theOpenNoMutex)
+    {
+      if(somethingthere)
+      {
+        res += " | ";
+      }
+      res += "SQLITE_OPEN_NOMUTEX";
+      somethingthere = true;
+    }
+    if(theOpenSharedCache)
+    {
+      if(somethingthere)
+      {
+        res += " | ";
+      }
+      res += "SQLITE_OPEN_SHAREDCACHE";
+    }
+    return res;
+  }
 
 /*******************************************************************************
  *                         JSONItemSequence::JSONIterator                      *
@@ -659,9 +706,14 @@ namespace zorba { namespace sqlite {
       theColumnCount = sqlite3_column_count(theStmt);
       if(theColumnCount > 0)
       {
-        theColumnNames = new std::string[theColumnCount];
-        for(int i=0; i<theColumnCount; i++){
-          theColumnNames[i] = sqlite3_column_name(theStmt, i);
+        theColumnNames = new char*[theColumnCount];
+        for(int i=0; i<theColumnCount; i++)
+        {
+          const char* lpChar = sqlite3_column_name(theStmt, i);
+          int lLen = strlen(lpChar);
+          theColumnNames[i] = new char[lLen+1];
+          memcpy(theColumnNames[i], lpChar, lLen);
+          theColumnNames[i][lLen] = '\0';
         }
       }
     }
@@ -678,7 +730,7 @@ namespace zorba { namespace sqlite {
       // get the resulting data from the statement
       // in a key = value fashion
       for(int i=0; i<theColumnCount; i++){
-        aKey = theFactory->createString(theColumnNames[i]);
+        aKey = theFactory->createString(std::string((const char *)theColumnNames[i]));
         aType = sqlite3_column_type(theStmt, i);
         switch(aType){
         case SQLITE_NULL:
@@ -727,10 +779,18 @@ namespace zorba { namespace sqlite {
     // Set the Rc to "no more data" and clear the variables
     theRc = SQLITE_ERROR;
     if((theColumnCount > 0) && theColumnNames)
+    {
+      for(int i=0; i<theColumnCount; i++)
+        delete[] theColumnNames[i];
       delete[] theColumnNames;
+    }
     theColumnCount = 0;
-    if(theStmt != NULL)
-      sqlite3_reset(theStmt);
+    if(theStmt != NULL){
+      if(isLongTerm)
+        sqlite3_reset(theStmt);
+      else
+        sqlite3_finalize(theStmt);
+    }
   }
 
 /*******************************************************************************
@@ -746,11 +806,7 @@ namespace zorba { namespace sqlite {
       theColumnCount = sqlite3_column_count(theStmt);
       if(theColumnCount > 0)
       {
-        theColumnNames = new std::string[theColumnCount];
         theActualColumn = 0;
-        for(int i=0; i<theColumnCount; i++){
-          theColumnNames[i] = sqlite3_column_name(theStmt, i);
-        }
         theRc = SQLITE_ROW;
       } else
         theRc = SQLITE_ERROR;
@@ -830,7 +886,6 @@ namespace zorba { namespace sqlite {
     // Set the Rc to "no more data" and clear the variables
     theRc = SQLITE_ERROR;
     theColumnCount = 0;
-    delete[] theColumnNames;
     if(theStmt != NULL)
       sqlite3_reset(theStmt);
   }
@@ -861,7 +916,7 @@ namespace zorba { namespace sqlite {
     // Connect to the specified location with the specified options
     lDbName = lItemName.getStringValue().str();
     if(lDbName == "")
-      lDbName = ":memory:";
+      lDbName = std::string(":memory:");
     lRc = sqlite3_open_v2(lDbName.c_str(), &lSqldb, lOptions.getOptionsAsInt(), NULL);
     if(lRc == SQLITE_CANTOPEN)
       throwError("SQLI0001", getErrorMessage("SQLI0001"));
@@ -982,7 +1037,7 @@ namespace zorba { namespace sqlite {
 
     // Once we got the SQL Query executed just pass it to the JSON Sequence
     // so it will return what we need to the user
-    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
+    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt, false));
     return ItemSequence_t(lSeq.release());
   }
 
@@ -1006,7 +1061,7 @@ namespace zorba { namespace sqlite {
 
     // Once we got the SQL Query executed just pass it to the JSON Sequence
     // after we get the result we convert it to a integer Item
-    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
+    std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt, false));
     Iterator_t lIter = lSeq->getIterator();
     lIter->open();
     lIter->next(lItemRes);

@@ -17,5 +17,5 @@ return {
   s:clear-params($prep-stmt);
   s:set-string($prep-stmt, 1, $name);
   s:set-string($prep-stmt, 2, $calories);
-  {"Affected Rows" : s:execute-update-prepared($prep-stmt)}
+  s:execute-update-prepared($prep-stmt)
 }
