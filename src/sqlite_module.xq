@@ -74,22 +74,6 @@ declare %an:sequential function s:connect(
   ) as xs:anyURI external;
  
 (:~
- : Disconnects the passed SQLite database object.
- :
- : The $conn argument provides the database encoded as xs:anyURI.
- : This parameter should define a SQLite database.
- :
- : @param $conn the database object encoded as xs:anyURI.
- :
- : @return nothing.
- :
- : @error s:SQLI0002 if $conn is not a valid SQLite database.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
- :)
-declare %an:sequential function s:disconnect(
-  $conn as xs:anyURI ) as empty-sequence() external; 
-  
-(:~
  : Returns whether on not the passed SQLite database object is connected.
  :
  : @param $conn the SQLite database object as xs:anyURI.

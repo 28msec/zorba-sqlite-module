@@ -4,6 +4,5 @@ let $db := s:connect("non-existent-file.db", {"open-read-only" : false, "open-cr
 
 return {
   variable $results := s:execute-query($db, "SELECT id, name, calories FROM smalltable");
-  variable $db := s:disconnect($db);
   $results
 }

@@ -6,6 +6,5 @@ let $db := s:connect(concat($path, "small2.db"))
 return {
   variable $isconn := s:is-connected($db);
   variable $result := s:execute-query($db, "select * from smalltable");
-  variable $old-db := s:disconnect($db);
   ($result, $isconn)
 }

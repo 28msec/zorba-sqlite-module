@@ -5,9 +5,7 @@ let $path := f:path-to-native(resolve-uri("./"))
 let $db := s:connect(concat($path, "small2.db"))
 
 return {
- variable $result := s:execute-query($db, "SELECT * FROM smalltable");
- variable $old-db := s:disconnect($db);
-
+  variable $result := s:execute-query($db, "SELECT * FROM smalltable");
   for $e in $result
   let $cal := $e("calories")
   order by $cal

@@ -9,7 +9,6 @@ return {
   variable $result3 := s:execute-update($db, "INSERT INTO maintable (name, salary) values('Juan', 200.0)");
   variable $result4 := s:execute-update($db, "INSERT INTO maintable (name, salary) values('Rodolfo', 300.0)");
   variable $result5 := s:execute-query($db, "SELECT id, name, salary FROM maintable");
-  s:disconnect($db);
 
   ($isconn, {"Affected Rows" : $result1}, {"Affected Rows" : $result2}, {"Affected Rows" : $result3}, {"Affected Rows" : $result4}, $result5)
 }

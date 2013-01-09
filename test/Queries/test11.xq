@@ -4,6 +4,5 @@ let $db := s:connect("")
 
 return {
   variable $results := s:execute-query($db, "SELECT id, name, calories FROM smalltable");
-  variable $db := s:disconnect($db);
   $results
 }

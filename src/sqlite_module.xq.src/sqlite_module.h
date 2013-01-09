@@ -345,22 +345,6 @@ namespace zorba { namespace sqlite {
     
   };
 
-  class DisconnectFunction : public SqliteFunction {
-  public:
-    DisconnectFunction(const SqliteModule* aModule) : SqliteFunction(aModule) {}
-
-    virtual ~DisconnectFunction() {}
-
-    virtual zorba::String
-      getLocalName() const { return "disconnect"; }
-
-    virtual zorba::ItemSequence_t
-      evaluate(const Arguments_t&,
-               const zorba::StaticContext*,
-               const zorba::DynamicContext*) const;
-    
-  };
-
   class IsConnectedFunction : public SqliteFunction {
   public:
     IsConnectedFunction(const SqliteModule* aModule) : SqliteFunction(aModule) {}

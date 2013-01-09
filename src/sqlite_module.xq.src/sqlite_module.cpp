@@ -50,10 +50,6 @@ namespace zorba { namespace sqlite {
       {
         lFunc = new ConnectFunction(this);
       }
-      else if (localName == "disconnect")
-      {
-        lFunc = new DisconnectFunction(this);
-      }
       else if (localName == "is-connected")
       {
         lFunc = new IsConnectedFunction(this);
@@ -923,31 +919,6 @@ namespace zorba { namespace sqlite {
       checkForError(lRc, 0, lSqldb);
 
     return ItemSequence_t(new SingletonItemSequence(SqliteModule::getItemFactory()->createAnyURI(lStrUUID)));
-  }
-
-
-/*******************************************************************************
- ******************************************************************************/
-  zorba::ItemSequence_t
-    DisconnectFunction::evaluate(
-    const Arguments_t& aArgs,
-    const zorba::StaticContext* aSctx,
-    const zorba::DynamicContext* aDctx) const 
-  { 
-    sqlite3 *lSqldb;
-    Item lItem = getOneItem(aArgs, 0);
-    ConnMap* lConnMap = getConnectionMap(aDctx);
-    
-    lSqldb = lConnMap->getConn(lItem.getStringValue().str());
-    if(lSqldb != NULL){
-      // In case we have it connected, disconnect it
-      lConnMap->deleteConn(lItem.getStringValue().str());
-    } else {
-      // throw error, UUID not recognized
-      throwError("SQLI0002", getErrorMessage("SQLI0002"));
-    }
-
-    return ItemSequence_t(new EmptySequence());
   }
 
 /*******************************************************************************

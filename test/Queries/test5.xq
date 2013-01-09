@@ -9,7 +9,6 @@ return {
   variable $meta := s:metadata($prep-statement);
   s:set-value($prep-statement, 1, 100);
   variable $result := s:execute-query-prepared($prep-statement);
-  variable $db := s:disconnect($db);
 
   for $e in $result
   return $e
