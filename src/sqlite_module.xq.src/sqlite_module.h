@@ -218,16 +218,16 @@ namespace zorba { namespace sqlite {
 
     SqliteOptions();
 
-    const bool
+    bool
     getOpenReadOnly() { return theOpenReadOnly; }
 
-    const bool
+    bool
     getOpenCreate() { return theOpenCreate; }
 
-    const bool
+    bool
     getOpenNoMutex() { return theOpenNoMutex; }
 
-    const bool
+    bool
     getOpenSharedCache() { return theOpenSharedCache; }
 
     void
