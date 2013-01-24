@@ -31,6 +31,7 @@
 #include <stdio.h>
 
 #include "sqlite_module.h"
+#include <sqlite_module/config.h>
 
 namespace zorba { namespace sqlite {
 
@@ -566,6 +567,12 @@ namespace zorba { namespace sqlite {
     {
       return "Parameter passed is not a valid value";
     }
+#ifndef SQLITE_WITH_FILE_ACCESS
+    else if(error == "SQLI0008")
+    {
+      return "Only in-memory databases are allowed (Module built without filesystem access)";
+    }
+#endif /* not SQLITE_WITH_FILE_ACCESS */
     else if(error == "SQLI9999")
     {
       return "Internal error ocurred";
@@ -909,6 +916,12 @@ namespace zorba { namespace sqlite {
     lDbName = lItemName.getStringValue().str();
     if(lDbName == "")
       lDbName = std::string(":memory:");
+
+#ifndef SQLITE_WITH_FILE_ACCESS
+    if (lDbName != ":memory:") {
+      throwError("SQLI0008", getErrorMessage("SQLI0008"));
+    }
+#endif /* not SQLITE_WITH_FILE_ACCESS */
     lRc = sqlite3_open_v2(lDbName.c_str(), &lSqldb, lOptions.getOptionsAsInt(), NULL);
     // Store the UUID for this connection and return it
     lStrUUID = createUUID();
