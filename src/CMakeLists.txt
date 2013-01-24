@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/sqlite_module.xq.src")
+CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/sqlite_module/config.h")
+INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}")
   
 DECLARE_ZORBA_MODULE (
   URI "http://www.zorba-xquery.com/modules/sqlite"

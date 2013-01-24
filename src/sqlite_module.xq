@@ -37,7 +37,9 @@ declare option ver:module-version "1.0";
  :
  : @return the SQLite database object as xs:anyURI.
  :
- : @error s:SQLI0001 if the databse name doesn't exist or it couldn't be opened.
+ : @error s:SQLI0001 if the database name doesn't exist or it couldn't be opened.
+ : @error s:SQLI0008 if a non-in-memory database is requested and the module
+ :     is built without filesystem access
  : @error s:SQLI9999 if there was an internal error inside SQLite library.
  :)
 declare %an:sequential function s:connect(

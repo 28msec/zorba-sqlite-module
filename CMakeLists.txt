@@ -42,6 +42,18 @@ ELSE (ZORBA_SUPRESS_SQLITE)
 
   IF (SQLITE_FOUND)
     MESSAGE (STATUS "Found SQLite --" ${SQLITE_LIBRARIES})
+
+    # Set SQLITE_WITH_FILE_ACCESS - by default will be the same value as
+    # ZORBA_WITH_FILE ACCESS when built inside Zorba, or "ON" if built
+    # stand-alone.
+    IF (DEFINED ZORBA_WITH_FILE_ACCESS)
+      SET (_file_access ${ZORBA_WITH_FILE_ACCESS})
+    ELSE (DEFINED ZORBA_WITH_FILE_ACCESS)
+      SET (_file_access ON)
+    ENDIF (DEFINED ZORBA_WITH_FILE_ACCESS)
+    SET(SQLITE_WITH_FILE_ACCESS ${_file_access} CACHE BOOL
+      "Allow filesystem-based SQLite databases")
+
     INCLUDE_DIRECTORIES (${SQLITE_INCLUDE_DIR})  
 
     ADD_SUBDIRECTORY("src")
