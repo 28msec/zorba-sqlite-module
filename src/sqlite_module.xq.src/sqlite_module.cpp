@@ -31,6 +31,7 @@
 #include <stdio.h>
 
 #include "sqlite_module.h"
+#include <sqlite_module/config.h>
 
 namespace zorba { namespace sqlite {
 
@@ -566,6 +567,18 @@ namespace zorba { namespace sqlite {
     {
       return "Parameter passed is not a valid value";
     }
+#ifndef SQLITE_WITH_FILE_ACCESS
+    else if(error == "SQLI0008")
+    {
+      return "Only in-memory databases are allowed (Module built without filesystem access)";
+    }
+#endif /* not SQLITE_WITH_FILE_ACCESS */
+#ifndef ZORBA_SQLITE_HAVE_METADATA
+    else if(error == "SQLI0009")
+    {
+      return "Metadata not found (SQLite built without SQLITE_ENABLE_COLUMN_METADATA)";
+    }
+#endif /* not ZORBA_SQLITE_HAVE_METADATA */
     else if(error == "SQLI9999")
     {
       return "Internal error ocurred";
@@ -819,6 +832,7 @@ namespace zorba { namespace sqlite {
     int lNotNull, lPrimaryKey, lAutoinc, lRc;
 
     if(theRc == SQLITE_ROW){
+#ifdef ZORBA_SQLITE_HAVE_METADATA
       // Get the metadata for 'theActualColumn' column
       // in a key = value fashion
       lDbHandle = sqlite3_db_handle(theStmt);
@@ -860,6 +874,7 @@ namespace zorba { namespace sqlite {
       aKey = theFactory->createString("autoincrement");
       aValue = theFactory->createBoolean((lAutoinc==0)?false:true);
       elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
+#endif
       aItem = theFactory->createJSONObject(elements);
       elements.clear();
       // Get more data if available
@@ -909,6 +924,12 @@ namespace zorba { namespace sqlite {
     lDbName = lItemName.getStringValue().str();
     if(lDbName == "")
       lDbName = std::string(":memory:");
+
+#ifndef SQLITE_WITH_FILE_ACCESS
+    if (lDbName != ":memory:") {
+      throwError("SQLI0008", getErrorMessage("SQLI0008"));
+    }
+#endif /* not SQLITE_WITH_FILE_ACCESS */
     lRc = sqlite3_open_v2(lDbName.c_str(), &lSqldb, lOptions.getOptionsAsInt(), NULL);
     // Store the UUID for this connection and return it
     lStrUUID = createUUID();
@@ -1055,6 +1076,7 @@ namespace zorba { namespace sqlite {
     const zorba::StaticContext* aSctx,
     const zorba::DynamicContext* aDctx) const 
   {
+#ifdef ZORBA_SQLITE_HAVE_METADATA
     sqlite3_stmt *lPstmt;
     zorba::Item lItemPstmt = getOneItem(aArgs, 0);
     zorba::Item lVecItem, lJSONKey, lJSONArray, lJSONRes;
@@ -1088,6 +1110,9 @@ namespace zorba { namespace sqlite {
     lJSONRes = lFactory->createJSONObject(lVectorRes);
     
     return ItemSequence_t(new SingletonItemSequence(lJSONRes));
+#else
+    throwError("SQLI0008", getErrorMessage("SQLI0008"));
+#endif
   }
 
 /*******************************************************************************
