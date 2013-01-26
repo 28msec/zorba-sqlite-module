@@ -1111,7 +1111,7 @@ namespace zorba { namespace sqlite {
     
     return ItemSequence_t(new SingletonItemSequence(lJSONRes));
 #else
-    throwError("SQLI0008", getErrorMessage("SQLI0008"));
+    throwError("SQLI0009", getErrorMessage("SQLI0009"));
 #endif
   }
 
