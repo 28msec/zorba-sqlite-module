@@ -30,8 +30,8 @@
 #include <iostream>
 #include <stdio.h>
 
-#include "sqlite_module.h"
 #include <sqlite_module/config.h>
+#include "sqlite_module.h"
 
 namespace zorba { namespace sqlite {
 
@@ -801,6 +801,7 @@ namespace zorba { namespace sqlite {
 /*******************************************************************************
  *              JSONMetadataItemSequence::JSONMetadataIterator                 *
  ******************************************************************************/
+#ifdef ZORBA_SQLITE_HAVE_METADATA
   void JSONMetadataItemSequence::JSONMetadataIterator::open(){
     // Get data and create the column names
     if(theStmt != NULL){
@@ -832,7 +833,6 @@ namespace zorba { namespace sqlite {
     int lNotNull, lPrimaryKey, lAutoinc, lRc;
 
     if(theRc == SQLITE_ROW){
-#ifdef ZORBA_SQLITE_HAVE_METADATA
       // Get the metadata for 'theActualColumn' column
       // in a key = value fashion
       lDbHandle = sqlite3_db_handle(theStmt);
@@ -874,7 +874,6 @@ namespace zorba { namespace sqlite {
       aKey = theFactory->createString("autoincrement");
       aValue = theFactory->createBoolean((lAutoinc==0)?false:true);
       elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-#endif
       aItem = theFactory->createJSONObject(elements);
       elements.clear();
       // Get more data if available
@@ -896,6 +895,7 @@ namespace zorba { namespace sqlite {
     if(theStmt != NULL)
       sqlite3_reset(theStmt);
   }
+#endif
 
 /*******************************************************************************
  ******************************************************************************/
