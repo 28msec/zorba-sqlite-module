@@ -68,6 +68,8 @@ declare %an:sequential function s:connect(
  :
  : @error s:SQLI0001 if the databse name doesn't exist or it couldn't be opened.
  : @error s:SQLI0007 if there is any unknown option specified.
+ : @error s:SQLI0008 if a non-in-memory database is requested and the module
+ :     is built without filesystem access
  : @error s:SQLI9999 if there was an internal error inside SQLite library.
  :)
 declare %an:sequential function s:connect(
@@ -173,6 +175,8 @@ declare %an:sequential function s:execute-update(
  : @return a object() with the associated the metadata.
  :
  : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
+ : @error s:SQLI0009 if no metadata is available (SQLite library compiled without
+ :     SQLITE_ENABLE_COLUMN_METADATA).
  : @error s:SQLI9999 if there was an internal error inside SQLite library.
  :)
 declare %an:sequential function s:metadata(

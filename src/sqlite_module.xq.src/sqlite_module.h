@@ -158,6 +158,7 @@ namespace zorba { namespace sqlite {
 
 /*******************************************************************************
  ******************************************************************************/
+#ifdef ZORBA_SQLITE_HAVE_METADATA
   class JSONMetadataItemSequence : public ItemSequence
   {
     public:
@@ -204,6 +205,7 @@ namespace zorba { namespace sqlite {
       zorba::Iterator_t 
         getIterator() { return new JSONMetadataIterator(thePrepStmt); }
   };
+#endif
 
 /*******************************************************************************
  ******************************************************************************/
