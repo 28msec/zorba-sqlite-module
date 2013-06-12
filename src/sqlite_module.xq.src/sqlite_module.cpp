@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-#include <zorba/item_factory.h>
-#include <zorba/singleton_item_sequence.h>
-#include <zorba/diagnostic_list.h>
-#include <zorba/empty_sequence.h>
-#include <zorba/user_exception.h>
-#include <zorba/transcode_stream.h>
-#include <zorba/base64_stream.h>
-#include <zorba/base64.h>
-#include <zorba/util/uuid.h>
+#include <cstdio>
+#include <sstream>
 #include <string>
-#include <cassert>
 
 #include <sqlite3.h>
-#include <iostream>
-#include <stdio.h>
 
-#include <sqlite_module/config.h>
+#include <zorba/diagnostic_list.h>
+#include <zorba/empty_sequence.h>
+#include <zorba/item_factory.h>
+#include <zorba/singleton_item_sequence.h>
+#include <zorba/user_exception.h>
+#include <zorba/util/base64_stream.h>
+#include <zorba/util/base64_util.h>
+#include <zorba/util/transcode_stream.h>
+#include <zorba/util/uuid.h>
+
+#include "sqlite_module/config.h"
 #include "sqlite_module.h"
 
 namespace zorba { namespace sqlite {
