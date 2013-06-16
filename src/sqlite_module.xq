@@ -21,8 +21,8 @@ xquery version "3.0";
  : from SQLite databases.</p>
  :
  : @author Luis Rodgriguez
- :
  : @library <a href="http://www.sqlite.org/">SQLite</a>
+ : @project DB Drivers/SQLite
  :)
  
 module namespace s = "http://www.zorba-xquery.com/modules/sqlite";
