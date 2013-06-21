@@ -754,7 +754,7 @@ namespace zorba { namespace sqlite {
         case SQLITE_BLOB:
           aSize = sqlite3_column_bytes(theStmt, i);
           aBlobPtr = (const char *)sqlite3_column_blob(theStmt, i);
-          aValue = theFactory->createBase64Binary(aBlobPtr, aSize);
+          aValue = theFactory->createBase64Binary(aBlobPtr, aSize, true);
           break;
         default:
           std::string str = std::string((const char *)sqlite3_column_text(theStmt, i));
