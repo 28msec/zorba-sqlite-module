@@ -82,7 +82,32 @@ namespace zorba { namespace sqlite {
       typedef std::map<String, ExternalFunction*, ltstr> FuncMap_t;
       FuncMap_t theFunctions;
 
+      static zorba::Item globalNameKey;
+      static zorba::Item globalDatabaseKey;
+      static zorba::Item globalTableKey;
+      static zorba::Item globalTypeKey;
+      static zorba::Item globalCollationKey;
+      static zorba::Item globalNullableKey;
+      static zorba::Item globalPrimaryKey;
+      static zorba::Item globalAutoincKey;
+      static zorba::Item globalAffectedRowsKey;
+
     public:
+
+      enum GLOBAL_KEYS { NAME, DATABASE, TABLE, TYPE, COLLATION, NULLABLE, PRIMARY_KEY, AUTOINC, AFFECTED_ROWS };
+
+      SqliteModule()
+      {
+          globalNameKey = Zorba::getInstance(0)->getItemFactory()->createString("name");
+          globalDatabaseKey = Zorba::getInstance(0)->getItemFactory()->createString("database");
+          globalTableKey = Zorba::getInstance(0)->getItemFactory()->createString("table");
+          globalTypeKey = Zorba::getInstance(0)->getItemFactory()->createString("type");
+          globalCollationKey = Zorba::getInstance(0)->getItemFactory()->createString("collation");
+          globalNullableKey =  Zorba::getInstance(0)->getItemFactory()->createString("nullable");
+          globalPrimaryKey = Zorba::getInstance(0)->getItemFactory()->createString("primary key");
+          globalAutoincKey = Zorba::getInstance(0)->getItemFactory()->createString("autoincrement");
+          globalAffectedRowsKey = Zorba::getInstance(0)->getItemFactory()->createString("Affected Rows");
+      }
 
       virtual ~SqliteModule();
 
@@ -103,6 +128,9 @@ namespace zorba { namespace sqlite {
       static zorba::String
       getModuleURI() { return "http://zorba.io/modules/sqlite"; }
 
+      static zorba::Item&
+      getGlobalKey(GLOBAL_KEYS g);
+
   };
 
 
@@ -115,7 +143,7 @@ namespace zorba { namespace sqlite {
       {
         protected:
           sqlite3_stmt* theStmt;
-          char** theColumnNames;
+          std::vector<zorba::Item> theColumnNamesZString;
           int theColumnCount;
           int theRc;
           bool isUpdateResult;
@@ -123,7 +151,7 @@ namespace zorba { namespace sqlite {
 
         public:
           JSONIterator(sqlite3_stmt* aPrepStmt):
-              theStmt(aPrepStmt),theColumnNames(NULL),theColumnCount(0),
+              theStmt(aPrepStmt),
               theRc(0),isUpdateResult(false) {}
 
           virtual ~JSONIterator() {

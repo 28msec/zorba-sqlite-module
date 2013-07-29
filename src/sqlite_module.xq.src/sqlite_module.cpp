@@ -35,6 +35,16 @@
 
 namespace zorba { namespace sqlite {
 
+// Allocating global variables
+zorba::Item SqliteModule::globalNameKey;
+zorba::Item SqliteModule::globalDatabaseKey;
+zorba::Item SqliteModule::globalTableKey;
+zorba::Item SqliteModule::globalTypeKey;
+zorba::Item SqliteModule::globalCollationKey;
+zorba::Item SqliteModule::globalNullableKey;
+zorba::Item SqliteModule::globalPrimaryKey;
+zorba::Item SqliteModule::globalAutoincKey;
+zorba::Item SqliteModule::globalAffectedRowsKey;
 
 /*******************************************************************************
  ******************************************************************************/
@@ -133,6 +143,25 @@ namespace zorba { namespace sqlite {
       delete lIter->second;
     }
     theFunctions.clear();
+  }
+
+  zorba::Item&
+  SqliteModule::getGlobalKey(GLOBAL_KEYS g)
+  {
+      switch(g)
+      {
+      case NAME: return globalNameKey;
+      case DATABASE: return globalDatabaseKey;
+      case TABLE: return globalTableKey;
+      case TYPE: return globalTypeKey;
+      case COLLATION: return globalCollationKey;
+      case NULLABLE: return globalNullableKey;
+      case PRIMARY_KEY: return globalPrimaryKey;
+      case AUTOINC: return globalAutoincKey;
+      case AFFECTED_ROWS: return globalAffectedRowsKey;
+      // Should never touch this case but still ...
+      default: return globalNameKey;
+      }
   }
 
   /***********************
@@ -718,6 +747,8 @@ namespace zorba { namespace sqlite {
  *                         JSONItemSequence::JSONIterator                      *
  ******************************************************************************/
   void JSONItemSequence::JSONIterator::open(){
+    zorba::Item lColumnName;
+    char* lColumnNameChar;
     // Get data and create the column names
     if(theStmt != NULL){
       theRc = sqlite3_step(theStmt);
@@ -730,14 +761,16 @@ namespace zorba { namespace sqlite {
       theColumnCount = sqlite3_column_count(theStmt);
       if(theColumnCount > 0)
       {
-        theColumnNames = new char*[theColumnCount];
         for(int i=0; i<theColumnCount; i++)
         {
           const char* lpChar = sqlite3_column_name(theStmt, i);
           int lLen = strlen(lpChar);
-          theColumnNames[i] = new char[lLen+1];
-          memcpy(theColumnNames[i], lpChar, lLen);
-          theColumnNames[i][lLen] = '\0';
+          lColumnNameChar = new char[lLen+1];
+          memcpy(lColumnNameChar, lpChar, lLen);
+          lColumnNameChar[lLen] = '\0';
+          lColumnName = theFactory->createString(lColumnNameChar);
+          theColumnNamesZString.push_back(lColumnName);
+          delete lColumnNameChar;
         }
       }
     }
@@ -745,7 +778,6 @@ namespace zorba { namespace sqlite {
 
   bool JSONItemSequence::JSONIterator::next(zorba::Item& aItem){
     int aType, aSize;
-    zorba::Item aKey;
     zorba::Item aValue;
     std::vector<std::pair<zorba::Item, zorba::Item> > elements;
     const char *aBlobPtr;
@@ -754,7 +786,6 @@ namespace zorba { namespace sqlite {
       // get the resulting data from the statement
       // in a key = value fashion
       for(int i=0; i<theColumnCount; i++){
-        aKey = theFactory->createString(std::string((const char *)theColumnNames[i]));
         aType = sqlite3_column_type(theStmt, i);
         switch(aType){
         case SQLITE_NULL:
@@ -777,7 +808,7 @@ namespace zorba { namespace sqlite {
             zorba::String(str)
           );
         }
-        elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
+        elements.push_back(std::pair<zorba::Item, zorba::Item>(theColumnNamesZString.at(i), aValue));
       }
       aItem = theFactory->createJSONObject(elements);
       elements.clear();
@@ -786,9 +817,8 @@ namespace zorba { namespace sqlite {
       return true;
     } else if(isUpdateResult && theRc == SQLITE_DONE){
       // we have a prepared statement that represents a UPDATE and it's already executed
-      aKey = theFactory->createString("Affected Rows");
       aValue = theFactory->createInt(sqlite3_changes(sqlite3_db_handle(theStmt)));
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::AFFECTED_ROWS), aValue));
       aItem = theFactory->createJSONObject(elements);
       elements.clear();
       // be sure it won't be back in here
@@ -802,11 +832,9 @@ namespace zorba { namespace sqlite {
   void JSONItemSequence::JSONIterator::close(){
     // Set the Rc to "no more data" and clear the variables
     theRc = SQLITE_ERROR;
-    if((theColumnCount > 0) && theColumnNames)
+    if(theColumnCount > 0)
     {
-      for(int i=0; i<theColumnCount; i++)
-        delete[] theColumnNames[i];
-      delete[] theColumnNames;
+      theColumnNamesZString.clear();
     }
     theColumnCount = 0;
     if(theStmt != NULL)
@@ -837,7 +865,7 @@ namespace zorba { namespace sqlite {
   }
 
   bool JSONMetadataItemSequence::JSONMetadataIterator::next(zorba::Item& aItem){
-    zorba::Item aKey;
+    //zorba::Item aKey;
     zorba::Item aValue;
     std::vector<std::pair<zorba::Item, zorba::Item> > elements;
     sqlite3 *lDbHandle;
@@ -866,30 +894,22 @@ namespace zorba { namespace sqlite {
                                     &lAutoinc);
       if(lRc != 0)
         SqliteFunction::throwError(0, sqlite3_errmsg(lDbHandle));
-      aKey = theFactory->createString("name");
       aValue = theFactory->createString(lOriginName);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("database");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::NAME), aValue));
       aValue = theFactory->createString(lDbName);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("table");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::DATABASE), aValue));
       aValue = theFactory->createString(lTableName);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("type");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::TABLE), aValue));
       aValue = theFactory->createString(lDataType);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("collation");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::TYPE), aValue));
       aValue = theFactory->createString(lCollSequence);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("nullable");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::COLLATION), aValue));
       aValue = theFactory->createBoolean((lNotNull==0)?false:true);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("primary key");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::NULLABLE), aValue));
       aValue = theFactory->createBoolean((lPrimaryKey==0)?false:true);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("autoincrement");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::PRIMARY_KEY), aValue));
       aValue = theFactory->createBoolean((lAutoinc==0)?false:true);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::AUTOINC), aValue));
       aItem = theFactory->createJSONObject(elements);
       elements.clear();
       // Get more data if available
