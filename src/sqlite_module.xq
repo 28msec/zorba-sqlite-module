@@ -1,4 +1,4 @@
-xquery version "3.0";
+jsoniq version "1.0";
 
 (:
  : Copyright 2012 The FLWOR Foundation.
@@ -17,15 +17,15 @@ xquery version "3.0";
  :)
 
 (:~
- : <p>This module provides functionality to extract, add and modify data 
- : from SQLite databases.</p>
+ : This module provides functionality to extract, add and modify data 
+ : from SQLite databases.<p/>
  :
  : @author Luis Rodgriguez
  : @library <a href="http://www.sqlite.org/">SQLite</a>
  : @project DB Drivers/SQLite
  :)
  
-module namespace s = "http://www.zorba-xquery.com/modules/sqlite";
+module namespace s = "http://zorba.io/modules/sqlite";
 declare namespace an = "http://www.zorba-xquery.com/annotations";
 declare namespace ver = "http://www.zorba-xquery.com/options/versioning";
 declare option ver:module-version "1.0";
@@ -37,21 +37,23 @@ declare option ver:module-version "1.0";
  :
  : @return the SQLite database object as xs:anyURI.
  :
- : @error s:SQLI0001 if the database name doesn't exist or it couldn't be opened.
- : @error s:SQLI0008 if a non-in-memory database is requested and the module
- :     is built without filesystem access
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:CANT-OPEN-DB if the database name doesn't exist or it couldn't be
+ :     opened.
+ : @error s:COMPILED-WITHOUT-DISK-ACCESS if a non-in-memory database is
+ :     requested and the module is built without filesystem access.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside 
+ :     SQLite library.
  :)
 declare %an:sequential function s:connect(
   $db-name as xs:string
   ) as xs:anyURI external;
 
 (:~
- : Connect to a SQLite database with optional options.
+ : Connect to a SQLite database with optional options.<p/>
  : All options are true/false values. Available options are: open-read-only,
  : open-create, open-no-mutex, and open-shared-cache.
  :
- : <p>The options are of the form: 
+ : The options are of the form: 
  : <pre>
  : {
  :   "open_read_only" : true,
@@ -59,18 +61,20 @@ declare %an:sequential function s:connect(
  :   ... 
  : }
  : </pre>
- : </p>
+ : <p/>
  :
  : @param $db-name the SQLite database name to be opened as xs:string.
  : @param $options a JSON object containing SQLite connection options.
  :
  : @return the SQLite database object as xs:anyURI.
  :
- : @error s:SQLI0001 if the databse name doesn't exist or it couldn't be opened.
- : @error s:SQLI0007 if there is any unknown option specified.
- : @error s:SQLI0008 if a non-in-memory database is requested and the module
- :     is built without filesystem access
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:CANT-OPEN-DB if the database name doesn't exist or it couldn't be
+ :     opened.
+ : @error s:UNKNOWN-OPTION if there is any unknown option specified.
+ : @error s:COMPILED-WITHOUT-DISK-ACCESS if a non-in-memory database is
+ :     requested and the module is built without filesystem access.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:connect(
   $db-name as xs:string,
@@ -82,36 +86,40 @@ declare %an:sequential function s:connect(
  :
  : @param $conn the SQLite database object as xs:anyURI.
  :
- : @return true if the given SQLite database object is connected, false otherwise.
+ : @return true if the given SQLite database object is connected, false
+ :     otherwise.
  :
- : @error s:SQLI0002 if $conn is not a valid SQLite database object.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-SQLITE-OBJECT if $conn is not a valid SQLite database object.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:is-connected(
   $conn as xs:anyURI ) as xs:boolean external;
   
 (:~
- : Commits all the pending update operations in this SQLite database.
+ : Commits all pending update operations in this SQLite database.
  :
  : @param $conn the SQLite database object as xs:anyURI.
  :
  : @return the passed SQLite object.
  :
- : @error s:SQLI0002 if $conn is not a valid SQLite database object.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-SQLITE-OBJECT if $conn is not a valid SQLite database object.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:commit(
   $conn as xs:anyURI ) as xs:anyURI external;
   
 (:~
- : Rollbacks all the pending update operations in this SQLite database.
+ : Rollbacks all pending update operations in this SQLite database.
  :
  : @param $conn the SQLite database object as xs:anyURI.
  :
  : @return the passed SQLite object.
  :
- : @error s:SQLI0002 if $conn is not a valid SQLite database object.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-SQLITE-OBJECT if $conn is not a valid SQLite database object.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:rollback(
   $conn as xs:anyURI ) as xs:anyURI external;
@@ -125,25 +133,27 @@ declare %an:sequential function s:rollback(
  :
  : @return a sequence of JSON objects describing each row returned.
  :
- : @error s:SQLI0002 if $conn is not a valid SQLite database object.
- : @error s:SQLI0003 if $stmnt is not a valid sql command.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-SQLITE-OBJECT if $conn is not a valid SQLite database object.
+ : @error s:INVALID-SQL-STATEMENT if $stmnt is not a valid sql command.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:execute-query(
   $conn as xs:anyURI,
   $sqlstr as xs:string ) as object()* external;
   
 (:~
- : Executes a update command over an already opened SQLite database object.
+ : Executes an update command over an already opened SQLite database object.
  :
  : @param $conn an already opened SQLite database object as xs:anyURI.
  : @param $sqlstr the update command to be executed as xs:string.
  :
  : @return the amount of rows modified by such update command.
  :
- : @error s:SQLI0002 if $conn is not a valid SQLite database object.
- : @error s:SQLI0003 if $stmnt is not a valid sql command.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-SQLITE-OBJECT if $conn is not a valid SQLite database object.
+ : @error s:INVALID-SQL-STATEMENT if $stmnt is not a valid sql command.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:execute-update(
   $conn as xs:anyURI,
@@ -152,7 +162,7 @@ declare %an:sequential function s:execute-update(
 (:~
  : Returns the metadata associated to a given prepared SQLite statement.
  :
- : <p>SQLite metadata is returned in the following form:
+ : SQLite metadata is returned in the following form:
  : <pre>
  : {
  :   "columns" : 
@@ -168,35 +178,39 @@ declare %an:sequential function s:execute-update(
  :       }*]
  : }
  : </pre>
- : </p>
+ : <p/>
  :
- : @param $pstmnt the sql command as xs:anyURI from which metadata will be extracted.
+ : @param $pstmnt the sql command as xs:anyURI from which metadata will be
+ :     extracted.
  :
  : @return a object() with the associated the metadata.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI0009 if no metadata is available (SQLite library compiled without
- :     SQLITE_ENABLE_COLUMN_METADATA).
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
+ : @error s:UNAVAILABLE-METADATA if no metadata is available (SQLite library
+ :     compiled without SQLITE_ENABLE_COLUMN_METADATA).
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:metadata(
   $pstmnt as xs:anyURI ) as object() external;
   
 (:~
  : Compiles a prepared statement based on an already connected SQLite database
- : and a string that defines the sql command.
+ : and a string that defines the sql command.<p/>
  :
- : <p>You can use '?' in the sql command as placeholders so you will
- : be able to bind variables later to such places.</p>
+ : You can use '?' in the sql command as placeholders so you will
+ : be able to bind variables later to such places.<p/>
  :
  : @param $conn the SQLite database object as xs:anyURI.
  : @param $stmnt the sql command as xs:string.
  :
  : @return a xs:anyURI object representing the prepared statement.
  :
- : @error s:SQLI0002 if $conn is not a valid SQLite database object.
- : @error s:SQLI0003 if $stmnt is not a valid sql command.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-SQLITE-OBJECT if $conn is not a valid SQLite database object.
+ : @error s:INVALID-SQL-STATEMENT if $stmnt is not a valid sql command.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:prepare-statement(
   $conn as xs:anyURI,
@@ -212,10 +226,12 @@ declare %an:sequential function s:prepare-statement(
  :
  : @return nothing.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI0005 if $param-num is not a valid position.
- : @error s:SQLI0007 if $val is not a valid value.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
+ : @error s:INVALID-PLACEHOLDER-POSITION if $param-num is not a valid position.
+ : @error s:INVALID-VALUE if $val is not a valid value.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:set-value(
   $pstmnt as xs:anyURI, 
@@ -231,9 +247,11 @@ declare %an:sequential function s:set-value(
  :
  : @return nothing.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI0005 if $param-num is not a valid position.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
+ : @error s:INVALID-PLACEHOLDER-POSITION if $param-num is not a valid position.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:set-boolean(
   $pstmnt as xs:anyURI, 
@@ -249,10 +267,12 @@ declare %an:sequential function s:set-boolean(
  :
  : @return nothing.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI0005 if $param-num is not a valid position.
- : @error s:SQLI0006 if $val is not a valid numeric type.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
+ : @error s:INVALID-PLACEHOLDER-POSITION if $param-num is not a valid position.
+ : @error s:INVALID-VALUE if $val is not a valid numeric type.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:set-numeric(
   $pstmnt as xs:anyURI, 
@@ -268,9 +288,11 @@ declare %an:sequential function s:set-numeric(
  :
  : @return nothing.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI0005 if $param-num is not a valid position.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
+ : @error s:INVALID-PLACEHOLDER-POSITION if $param-num is not a valid position.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:set-string(
   $pstmnt as xs:anyURI, 
@@ -285,9 +307,11 @@ declare %an:sequential function s:set-string(
  :
  : @return nothing.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI0005 if $param-num is not a valid position.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
+ : @error s:INVALID-PLACEHOLDER-POSITION if $param-num is not a valid position.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:set-null(
   $pstmnt as xs:anyURI, 
@@ -300,8 +324,10 @@ declare %an:sequential function s:set-null(
  :
  : @return nothing.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:clear-params(
   $pstmnt as xs:anyURI ) as empty-sequence() external;
@@ -313,7 +339,8 @@ declare %an:sequential function s:clear-params(
  :
  : @return nothing.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
  :)
 declare %an:sequential function s:close-prepared(
   $pstmnt as xs:anyURI ) as empty-sequence() external;
@@ -326,8 +353,10 @@ declare %an:sequential function s:close-prepared(
  :
  : @return a sequence of JSON objects representing the query results.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:execute-query-prepared(
   $pstmnt as xs:anyURI ) as object()* external;
@@ -340,8 +369,10 @@ declare %an:sequential function s:execute-query-prepared(
  :
  : @return an integer that represents the amount of rows affected.
  :
- : @error s:SQLI0004 if $pstmnt is not a valid SQLite prepared statement.
- : @error s:SQLI9999 if there was an internal error inside SQLite library.
+ : @error s:INVALID-PREPARED-STATEMENT if $pstmnt is not a valid SQLite prepared
+ :     statement.
+ : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
+ :     library.
  :)
 declare %an:sequential function s:execute-update-prepared(
   $pstmnt as xs:anyURI ) as xs:integer external;

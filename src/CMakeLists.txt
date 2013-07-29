@@ -17,7 +17,7 @@ CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake"
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}")
   
 DECLARE_ZORBA_MODULE (
-  URI "http://www.zorba-xquery.com/modules/sqlite"
+  URI "http://zorba.io/modules/sqlite"
   VERSION 1.0
   FILE "sqlite_module.xq"
   LINK_LIBRARIES "${SQLITE_LIBRARIES}")

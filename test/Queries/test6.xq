@@ -1,4 +1,4 @@
-import module namespace s = "http://www.zorba-xquery.com/modules/sqlite";
+import module namespace s = "http://zorba.io/modules/sqlite";
 
 let $db := s:connect("small2.db")
 

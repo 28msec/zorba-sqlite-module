@@ -101,7 +101,7 @@ namespace zorba { namespace sqlite {
       }
 
       static zorba::String
-      getModuleURI() { return "http://www.zorba-xquery.com/modules/sqlite"; }
+      getModuleURI() { return "http://zorba.io/modules/sqlite"; }
 
   };
 

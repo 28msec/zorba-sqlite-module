@@ -1,5 +1,5 @@
 import module namespace s =
-  "http://www.zorba-xquery.com/modules/sqlite";
+  "http://zorba.io/modules/sqlite";
 
 let $xml := 
 <root>
