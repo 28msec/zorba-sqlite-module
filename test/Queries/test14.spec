@@ -1,1 +1,1 @@
-Error: http://www.zorba-xquery.com/modules/sqlite:SQLI0004
+Error: http://zorba.io/modules/sqlite:INVALID-PREPARED-STATEMENT

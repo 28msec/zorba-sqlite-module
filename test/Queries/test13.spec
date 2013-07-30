@@ -1,1 +1,1 @@
-Error: http://www.zorba-xquery.com/modules/sqlite:SQLI0002
+Error: http://zorba.io/modules/sqlite:INVALID-SQLITE-OBJECT

@@ -1,1 +1,1 @@
-Error: http://www.zorba-xquery.com/modules/sqlite:SQLI0006
+Error: http://zorba.io/modules/sqlite:INVALID-VALUE

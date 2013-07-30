@@ -35,43 +35,66 @@
 
 namespace zorba { namespace sqlite {
 
+// Allocating global variables
+zorba::Item SqliteModule::globalNameKey;
+zorba::Item SqliteModule::globalDatabaseKey;
+zorba::Item SqliteModule::globalTableKey;
+zorba::Item SqliteModule::globalTypeKey;
+zorba::Item SqliteModule::globalCollationKey;
+zorba::Item SqliteModule::globalNullableKey;
+zorba::Item SqliteModule::globalPrimaryKey;
+zorba::Item SqliteModule::globalAutoincKey;
+zorba::Item SqliteModule::globalAffectedRowsKey;
 
 /*******************************************************************************
  ******************************************************************************/
-  zorba::ExternalFunction*
-    SqliteModule::getExternalFunction(const zorba::String& localName)
+SqliteModule::SqliteModule()
+{
+  globalNameKey = Zorba::getInstance(0)->getItemFactory()->createString("name");
+  globalDatabaseKey = Zorba::getInstance(0)->getItemFactory()->createString("database");
+  globalTableKey = Zorba::getInstance(0)->getItemFactory()->createString("table");
+  globalTypeKey = Zorba::getInstance(0)->getItemFactory()->createString("type");
+  globalCollationKey = Zorba::getInstance(0)->getItemFactory()->createString("collation");
+  globalNullableKey =  Zorba::getInstance(0)->getItemFactory()->createString("nullable");
+  globalPrimaryKey = Zorba::getInstance(0)->getItemFactory()->createString("primary key");
+  globalAutoincKey = Zorba::getInstance(0)->getItemFactory()->createString("autoincrement");
+  globalAffectedRowsKey = Zorba::getInstance(0)->getItemFactory()->createString("Affected Rows");
+}
+
+zorba::ExternalFunction*
+SqliteModule::getExternalFunction(const zorba::String& localName)
+{
+  FuncMap_t::iterator lIte = theFunctions.find(localName);
+
+  ExternalFunction*& lFunc = theFunctions[localName];
+
+  if (lIte == theFunctions.end())
   {
-    FuncMap_t::iterator lIte = theFunctions.find(localName);
-
-    ExternalFunction*& lFunc = theFunctions[localName];
-
-    if (lIte == theFunctions.end())
+    if (localName == "connect")
     {
-      if (localName == "connect")
-      {
-        lFunc = new ConnectFunction(this);
-      }
-      else if (localName == "is-connected")
-      {
-        lFunc = new IsConnectedFunction(this);
-      }
-      else if (localName == "commit")
-      {
-        lFunc = new CommitFunction(this);
-      }
-      else if (localName == "rollback")
-      {
-        lFunc = new RollbackFunction(this);
-      }
-      else if (localName == "execute-query")
-      {
-        lFunc = new ExecuteQueryFunction(this);
-      }
-      else if (localName == "execute-update")
-      {
-        lFunc = new ExecuteUpdateFunction(this);
-      }
-      else if (localName == "metadata")
+      lFunc = new ConnectFunction(this);
+    }
+    else if (localName == "is-connected")
+    {
+      lFunc = new IsConnectedFunction(this);
+    }
+    else if (localName == "commit")
+    {
+      lFunc = new CommitFunction(this);
+    }
+    else if (localName == "rollback")
+    {
+      lFunc = new RollbackFunction(this);
+    }
+    else if (localName == "execute-query")
+    {
+      lFunc = new ExecuteQueryFunction(this);
+    }
+    else if (localName == "execute-update")
+    {
+      lFunc = new ExecuteUpdateFunction(this);
+    }
+    else if (localName == "metadata")
       {
         lFunc = new MetadataFunction(this);
       }
@@ -133,6 +156,25 @@ namespace zorba { namespace sqlite {
       delete lIter->second;
     }
     theFunctions.clear();
+  }
+
+  zorba::Item&
+  SqliteModule::getGlobalKey(GLOBAL_KEYS g)
+  {
+      switch(g)
+      {
+      case NAME: return globalNameKey;
+      case DATABASE: return globalDatabaseKey;
+      case TABLE: return globalTableKey;
+      case TYPE: return globalTypeKey;
+      case COLLATION: return globalCollationKey;
+      case NULLABLE: return globalNullableKey;
+      case PRIMARY_KEY: return globalPrimaryKey;
+      case AUTOINC: return globalAutoincKey;
+      case AFFECTED_ROWS: return globalAffectedRowsKey;
+      // Should never touch this case but still ...
+      default: return globalNameKey;
+      }
   }
 
   /***********************
@@ -324,7 +366,8 @@ namespace zorba { namespace sqlite {
   }
 
   sqlite3_stmt* 
-  SqliteFunction::createPreparedStatement(const zorba::DynamicContext* aDctx, std::string aUUID, std::string aQry){
+  SqliteFunction::createPreparedStatement(const zorba::DynamicContext* aDctx,
+                                          std::string aUUID, std::string aQry){
     sqlite3 *lDb;
     sqlite3_stmt *lPstmt;
     int lRc;
@@ -334,7 +377,7 @@ namespace zorba { namespace sqlite {
     lDb = lConnMap->getConn(aUUID);
     if(lDb == NULL){
       // throw error, ID not recognized
-      throwError("SQLI0002", getErrorMessage("SQLI0002"));
+      throwError("INVALID-SQLITE-OBJECT", getErrorMessage("INVALID-SQLITE-OBJECT"));
     }
 
     lRc = sqlite3_prepare_v2(lDb, aQry.c_str(), aQry.size(), &lPstmt, &lTail);
@@ -342,10 +385,10 @@ namespace zorba { namespace sqlite {
       sqlite3_finalize(lPstmt);
     }
     if(lRc == SQLITE_ERROR) {
-      std::string lErr = getErrorMessage("SQLI0003");
+      std::string lErr = getErrorMessage("INVALID-SQL-STATEMENT");
       lErr += "; ";
       lErr += sqlite3_errmsg(lDb);
-      throwError("SQLI0003", lErr.c_str());
+      throwError("INVALID-SQL-STATEMENT", lErr.c_str());
     } else
       checkForError(lRc, 0, lDb);
 
@@ -364,11 +407,13 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
     }
     lRc = sqlite3_bind_int(lPstmt, aPos, (aVal==true)?1:0);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", getErrorMessage("SQLI0005"));
+      throwError("INVALID-PLACEHOLDER-POSITION",
+                 getErrorMessage("INVALID-PLACEHOLDER-POSITION"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -386,11 +431,13 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
     }
     lRc = sqlite3_bind_int(lPstmt, aPos, aVal);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", getErrorMessage("SQLI0005"));
+      throwError("INVALID-PLACEHOLDER-POSITION",
+                 getErrorMessage("INVALID-PLACEHOLDER-POSITION"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -408,11 +455,13 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
     }
     lRc = sqlite3_bind_double(lPstmt, aPos, aVal);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", getErrorMessage("SQLI0005"));
+      throwError("INVALID-PLACEHOLDER-POSITION",
+                 getErrorMessage("INVALID-PLACEHOLDER-POSITION"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -430,11 +479,13 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
     }
     lRc = sqlite3_bind_text(lPstmt, aPos, aVal.c_str(), aVal.size(), SQLITE_TRANSIENT);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", getErrorMessage("SQLI0005"));
+      throwError("INVALID-PLACEHOLDER-POSITION",
+                 getErrorMessage("INVALID-PLACEHOLDER-POSITION"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -451,11 +502,13 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement and then set the value
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
     }
     lRc = sqlite3_bind_null(lPstmt, aPos);
     if(lRc == SQLITE_RANGE)
-      throwError("SQLI0005", getErrorMessage("SQLI0005"));
+      throwError("INVALID-PLACEHOLDER-POSITION",
+                 getErrorMessage("INVALID-PLACEHOLDER-POSITION"));
     else
       checkForError(lRc, 0, sqlite3_db_handle(lPstmt));
   }
@@ -470,7 +523,8 @@ namespace zorba { namespace sqlite {
     // get the prepared statement if exists
     lPstmt = stmtMap->getStmt(aUUID);
     if(lPstmt == NULL){
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
     }
     sqlite3_clear_bindings(lPstmt);
   }
@@ -502,7 +556,7 @@ namespace zorba { namespace sqlite {
     {
       if (!aLocalName)
       {
-        throwError("SQLI9999", sqlite3_errmsg(sql));
+        throwError("INTERNAL-SQLITE-PROBLEM", sqlite3_errmsg(sql));
       }
       else
       {
@@ -539,47 +593,47 @@ namespace zorba { namespace sqlite {
 
   const char *
   SqliteFunction::getErrorMessage(std::string error){
-    if(error == "SQLI0001")
+    if(error == "CANT-OPEN-DB")
     {
       return "Database file does not exist or it is not possible to open it";
     } 
-    else if(error == "SQLI0002")
+    else if(error == "INVALID-SQLITE-OBJECT")
     {
       return "Connection ID passed is not valid";
     }
-    else if(error == "SQLI0003")
+    else if(error == "INVALID-SQL-STATEMENT")
     {
       return "Statement passed is not a valid SQL statement";
     }
-    else if(error == "SQLI0004")
+    else if(error == "INVALID-PREPARED-STATEMENT")
     {
       return "Prepared statement passed is not valid";
     }
-    else if(error == "SQLI0005")
+    else if(error == "INVALID-PLACEHOLDER-POSITION")
     {
       return "Parameter position passed is not valid";
     }
-    else if(error == "SQLI0006")
+    else if(error == "INVALID-VALUE")
     {
       return "Parameter passed is not a valid number";
     }
-    else if(error == "SQLI0007")
+    else if(error == "UNKNOWN-OPTION")
     {
       return "Parameter passed is not a valid value";
     }
 #ifndef SQLITE_WITH_FILE_ACCESS
-    else if(error == "SQLI0008")
+    else if(error == "COMPILED-WITHOUT-DISK-ACCESS")
     {
       return "Only in-memory databases are allowed (Module built without filesystem access)";
     }
 #endif /* not SQLITE_WITH_FILE_ACCESS */
 #ifndef ZORBA_SQLITE_HAVE_METADATA
-    else if(error == "SQLI0009")
+    else if(error == "UNAVAILABLE-METADATA")
     {
       return "Metadata not found (SQLite built without SQLITE_ENABLE_COLUMN_METADATA)";
     }
 #endif /* not ZORBA_SQLITE_HAVE_METADATA */
-    else if(error == "SQLI9999")
+    else if(error == "INTERNAL-SQLITE-PROBLEM")
     {
       return "Internal error ocurred";
     }
@@ -632,7 +686,9 @@ namespace zorba { namespace sqlite {
       } else
         // Not sure if I should stop here in case that any option
         // are not in the list
-        SqliteFunction::throwError("SQLI0007", (std::string(SqliteFunction::getErrorMessage("SQLI0007")) + " - " + lItemJSONKey.getStringValue().str()).c_str());
+        SqliteFunction::throwError("UNKNOWN-OPTION",
+                                   (std::string(SqliteFunction::getErrorMessage("UNKNOWN-OPTION")) + " - " +
+                                    lItemJSONKey.getStringValue().str()).c_str());
     }
     lIterKeys->close();
   }
@@ -704,10 +760,13 @@ namespace zorba { namespace sqlite {
  *                         JSONItemSequence::JSONIterator                      *
  ******************************************************************************/
   void JSONItemSequence::JSONIterator::open(){
+    zorba::Item lColumnName;
+    char* lColumnNameChar;
     // Get data and create the column names
     if(theStmt != NULL){
       theRc = sqlite3_step(theStmt);
-      SqliteFunction::checkForError((theRc==SQLITE_ROW || theRc==SQLITE_DONE)?0:-1, 0, sqlite3_db_handle(theStmt));
+      SqliteFunction::checkForError((theRc==SQLITE_ROW || theRc==SQLITE_DONE)?0:-1, 0,
+                                    sqlite3_db_handle(theStmt));
       if(theRc == SQLITE_DONE)
         isUpdateResult = true;
       theFactory = Zorba::getInstance(0)->getItemFactory();
@@ -715,14 +774,16 @@ namespace zorba { namespace sqlite {
       theColumnCount = sqlite3_column_count(theStmt);
       if(theColumnCount > 0)
       {
-        theColumnNames = new char*[theColumnCount];
         for(int i=0; i<theColumnCount; i++)
         {
           const char* lpChar = sqlite3_column_name(theStmt, i);
           int lLen = strlen(lpChar);
-          theColumnNames[i] = new char[lLen+1];
-          memcpy(theColumnNames[i], lpChar, lLen);
-          theColumnNames[i][lLen] = '\0';
+          lColumnNameChar = new char[lLen+1];
+          memcpy(lColumnNameChar, lpChar, lLen);
+          lColumnNameChar[lLen] = '\0';
+          lColumnName = theFactory->createString(lColumnNameChar);
+          theColumnNamesZString.push_back(lColumnName);
+          delete lColumnNameChar;
         }
       }
     }
@@ -730,7 +791,6 @@ namespace zorba { namespace sqlite {
 
   bool JSONItemSequence::JSONIterator::next(zorba::Item& aItem){
     int aType, aSize;
-    zorba::Item aKey;
     zorba::Item aValue;
     std::vector<std::pair<zorba::Item, zorba::Item> > elements;
     const char *aBlobPtr;
@@ -739,7 +799,6 @@ namespace zorba { namespace sqlite {
       // get the resulting data from the statement
       // in a key = value fashion
       for(int i=0; i<theColumnCount; i++){
-        aKey = theFactory->createString(std::string((const char *)theColumnNames[i]));
         aType = sqlite3_column_type(theStmt, i);
         switch(aType){
         case SQLITE_NULL:
@@ -762,7 +821,7 @@ namespace zorba { namespace sqlite {
             zorba::String(str)
           );
         }
-        elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
+        elements.push_back(std::pair<zorba::Item, zorba::Item>(theColumnNamesZString.at(i), aValue));
       }
       aItem = theFactory->createJSONObject(elements);
       elements.clear();
@@ -771,9 +830,8 @@ namespace zorba { namespace sqlite {
       return true;
     } else if(isUpdateResult && theRc == SQLITE_DONE){
       // we have a prepared statement that represents a UPDATE and it's already executed
-      aKey = theFactory->createString("Affected Rows");
       aValue = theFactory->createInt(sqlite3_changes(sqlite3_db_handle(theStmt)));
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::AFFECTED_ROWS), aValue));
       aItem = theFactory->createJSONObject(elements);
       elements.clear();
       // be sure it won't be back in here
@@ -787,11 +845,9 @@ namespace zorba { namespace sqlite {
   void JSONItemSequence::JSONIterator::close(){
     // Set the Rc to "no more data" and clear the variables
     theRc = SQLITE_ERROR;
-    if((theColumnCount > 0) && theColumnNames)
+    if(theColumnCount > 0)
     {
-      for(int i=0; i<theColumnCount; i++)
-        delete[] theColumnNames[i];
-      delete[] theColumnNames;
+      theColumnNamesZString.clear();
     }
     theColumnCount = 0;
     if(theStmt != NULL)
@@ -806,7 +862,8 @@ namespace zorba { namespace sqlite {
     // Get data and create the column names
     if(theStmt != NULL){
       theRc = sqlite3_step(theStmt);
-      SqliteFunction::checkForError((theRc==SQLITE_ROW || theRc==SQLITE_DONE)?0:-1, 0, sqlite3_db_handle(theStmt));
+      SqliteFunction::checkForError((theRc==SQLITE_ROW || theRc==SQLITE_DONE)?0:-1, 0,
+                                    sqlite3_db_handle(theStmt));
       theFactory = Zorba::getInstance(0)->getItemFactory();
 
       theColumnCount = sqlite3_column_count(theStmt);
@@ -821,7 +878,7 @@ namespace zorba { namespace sqlite {
   }
 
   bool JSONMetadataItemSequence::JSONMetadataIterator::next(zorba::Item& aItem){
-    zorba::Item aKey;
+    //zorba::Item aKey;
     zorba::Item aValue;
     std::vector<std::pair<zorba::Item, zorba::Item> > elements;
     sqlite3 *lDbHandle;
@@ -850,30 +907,22 @@ namespace zorba { namespace sqlite {
                                     &lAutoinc);
       if(lRc != 0)
         SqliteFunction::throwError(0, sqlite3_errmsg(lDbHandle));
-      aKey = theFactory->createString("name");
       aValue = theFactory->createString(lOriginName);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("database");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::NAME), aValue));
       aValue = theFactory->createString(lDbName);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("table");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::DATABASE), aValue));
       aValue = theFactory->createString(lTableName);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("type");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::TABLE), aValue));
       aValue = theFactory->createString(lDataType);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("collation");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::TYPE), aValue));
       aValue = theFactory->createString(lCollSequence);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("nullable");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::COLLATION), aValue));
       aValue = theFactory->createBoolean((lNotNull==0)?false:true);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("primary key");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::NULLABLE), aValue));
       aValue = theFactory->createBoolean((lPrimaryKey==0)?false:true);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
-      aKey = theFactory->createString("autoincrement");
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::PRIMARY_KEY), aValue));
       aValue = theFactory->createBoolean((lAutoinc==0)?false:true);
-      elements.push_back(std::pair<zorba::Item, zorba::Item>(aKey, aValue));
+      elements.push_back(std::pair<zorba::Item, zorba::Item>(SqliteModule::getGlobalKey(SqliteModule::AUTOINC), aValue));
       aItem = theFactory->createJSONObject(elements);
       elements.clear();
       // Get more data if available
@@ -927,7 +976,8 @@ namespace zorba { namespace sqlite {
 
 #ifndef SQLITE_WITH_FILE_ACCESS
     if (lDbName != ":memory:") {
-      throwError("SQLI0008", getErrorMessage("SQLI0008"));
+      throwError("COMPILED-WITHOUT-DISK-ACCESS",
+                 getErrorMessage("COMPILED-WITHOUT-DISK-ACCESS"));
     }
 #endif /* not SQLITE_WITH_FILE_ACCESS */
     lRc = sqlite3_open_v2(lDbName.c_str(), &lSqldb, lOptions.getOptionsAsInt(), NULL);
@@ -935,7 +985,7 @@ namespace zorba { namespace sqlite {
     lStrUUID = createUUID();
     lConnMap->storeConn(lStrUUID, lSqldb);
     if(lRc == SQLITE_CANTOPEN)
-      throwError("SQLI0001", getErrorMessage("SQLI0001"));
+      throwError("CANT-OPEN-DB", getErrorMessage("CANT-OPEN-DB"));
     else
       checkForError(lRc, 0, lSqldb);
 
@@ -981,7 +1031,7 @@ namespace zorba { namespace sqlite {
 
     lDb = lConnMap->getConn(lItemUUID.getStringValue().str());
     if(lDb == NULL)
-      throwError("SQLI0002", getErrorMessage("SQLI0002"));
+      throwError("INVALID-SQLITE-OBJECT", getErrorMessage("INVALID-SQLITE-OBJECT"));
 
     return ItemSequence_t(new SingletonItemSequence(lItemUUID));
   }
@@ -1000,7 +1050,7 @@ namespace zorba { namespace sqlite {
 
     lDb = lConnMap->getConn(lItemUUID.getStringValue().str());
     if(lDb == NULL)
-      throwError("SQLI0002", getErrorMessage("SQLI0002"));
+      throwError("INVALID-SQLITE-OBJECT", getErrorMessage("INVALID-SQLITE-OBJECT"));
 
     return ItemSequence_t(new SingletonItemSequence(lItemUUID));
   }
@@ -1091,7 +1141,8 @@ namespace zorba { namespace sqlite {
     lPstmt = lStmtMap->getStmt(lItemPstmt.getStringValue().str());
     if(lPstmt == NULL){
       // No valid prepared statement id passed
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
     }
 
     // So now create a JSONMetadataItemSequence and let it
@@ -1111,7 +1162,7 @@ namespace zorba { namespace sqlite {
     
     return ItemSequence_t(new SingletonItemSequence(lJSONRes));
 #else
-    throwError("SQLI0009", getErrorMessage("SQLI0009"));
+    throwError("UNAVAILABLE-METADATA", getErrorMessage("UNAVAILABLE-METADATA"));
 #endif
   }
 
@@ -1156,27 +1207,33 @@ namespace zorba { namespace sqlite {
     lPos = strToInt(lItemPos.getStringValue().str());
     switch(lItem.getTypeCode()){
     case store::XS_BOOLEAN:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItem.getBooleanValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, lItem.getBooleanValue());
       break;
     case store::XS_BYTE:
     case store::XS_INT:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItem.getIntValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, lItem.getIntValue());
       break;
     case store::XS_INTEGER:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, strToInt(lItem.getStringValue().str()));
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, strToInt(lItem.getStringValue().str()));
       break;
     case store::XS_FLOAT:
     case store::XS_DOUBLE:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItem.getDoubleValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, lItem.getDoubleValue());
       break;
     case store::XS_DECIMAL:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, strToDouble(lItem.getStringValue().str()));
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, strToDouble(lItem.getStringValue().str()));
       break;
     case store::XS_STRING:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItem.getStringValue().str());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, lItem.getStringValue().str());
       break;
     default:
-      throwError("SQLI0007", getErrorMessage("SQLI0007"));
+      throwError("INVALID-VALUE", getErrorMessage("INVALID-VALUE"));
     }
     return ItemSequence_t(new EmptySequence());
   }
@@ -1193,7 +1250,8 @@ namespace zorba { namespace sqlite {
     Item lItemPos = getOneItem(aArgs, 1);
     Item lItemBool = getOneItem(aArgs, 2);
 
-    setValueToStatement(aDctx, lItemUUID.getStringValue().str(), strToInt(lItemPos.getStringValue().str()), lItemBool.getBooleanValue());
+    setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                        strToInt(lItemPos.getStringValue().str()), lItemBool.getBooleanValue());
     return ItemSequence_t(new EmptySequence());
   }
 
@@ -1213,20 +1271,24 @@ namespace zorba { namespace sqlite {
     switch(lItemNumeric.getTypeCode()){
     case store::XS_BYTE:
     case store::XS_INT:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItemNumeric.getIntValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, lItemNumeric.getIntValue());
       break;
     case store::XS_INTEGER:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, strToInt(lItemNumeric.getStringValue().str()));
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, strToInt(lItemNumeric.getStringValue().str()));
       break;
     case store::XS_FLOAT:
     case store::XS_DOUBLE:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, lItemNumeric.getDoubleValue());
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, lItemNumeric.getDoubleValue());
       break;
     case store::XS_DECIMAL:
-      setValueToStatement(aDctx, lItemUUID.getStringValue().str(), lPos, strToDouble(lItemNumeric.getStringValue().str()));
+      setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                          lPos, strToDouble(lItemNumeric.getStringValue().str()));
       break;
     default:
-      throwError("SQLI0006", getErrorMessage("SQLI0006"));
+      throwError("INVALID-VALUE", getErrorMessage("INVALID-VALUE"));
     }
     return ItemSequence_t(new EmptySequence());
   }
@@ -1243,7 +1305,8 @@ namespace zorba { namespace sqlite {
     Item lItemPos = getOneItem(aArgs, 1);
     Item lItemString = getOneItem(aArgs, 2);
     
-    setValueToStatement(aDctx, lItemUUID.getStringValue().str(), strToInt(lItemPos.getStringValue().str()), lItemString.getStringValue().str());
+    setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                        strToInt(lItemPos.getStringValue().str()), lItemString.getStringValue().str());
     return ItemSequence_t(new EmptySequence());
   }
 
@@ -1258,7 +1321,8 @@ namespace zorba { namespace sqlite {
     Item lItemUUID = getOneItem(aArgs, 0);
     Item lItemPos = getOneItem(aArgs, 1);
 
-    setValueToStatement(aDctx, lItemUUID.getStringValue().str(), strToInt(lItemPos.getStringValue().str()));
+    setValueToStatement(aDctx, lItemUUID.getStringValue().str(),
+                        strToInt(lItemPos.getStringValue().str()));
     return ItemSequence_t(new EmptySequence());
   }
 
@@ -1292,7 +1356,8 @@ namespace zorba { namespace sqlite {
     stmtMap = getStatementMap(aDctx);
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
     if(lPstmt == NULL)
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
 
     // Once we got the prepared statement just get rid of it
     stmtMap->deleteStmt(lItemUUID.getStringValue().str());
@@ -1314,7 +1379,8 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
     if(lPstmt == NULL)
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
 
     // And let the JSONItemSequence execute it
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));
@@ -1337,7 +1403,8 @@ namespace zorba { namespace sqlite {
     // Get the prepared statement
     lPstmt = stmtMap->getStmt(lItemUUID.getStringValue().str());
     if(lPstmt == NULL)
-      throwError("SQLI0004", getErrorMessage("SQLI0004"));
+      throwError("INVALID-PREPARED-STATEMENT",
+                 getErrorMessage("INVALID-PREPARED-STATEMENT"));
 
     // And let the JSONItemSequence execute it
     std::auto_ptr<JSONItemSequence> lSeq(new JSONItemSequence(lPstmt));

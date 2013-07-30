@@ -1,1 +1,1 @@
-Error: http://www.zorba-xquery.com/modules/sqlite:SQLI0001
+Error: http://zorba.io/modules/sqlite:CANT-OPEN-DB

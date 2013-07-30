@@ -1,1 +1,1 @@
-Error: http://www.zorba-xquery.com/modules/sqlite:SQLI0009
+Error: http://zorba.io/modules/sqlite:UNAVAILABLE-METADATA
