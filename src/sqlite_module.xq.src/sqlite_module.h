@@ -96,18 +96,7 @@ namespace zorba { namespace sqlite {
 
       enum GLOBAL_KEYS { NAME, DATABASE, TABLE, TYPE, COLLATION, NULLABLE, PRIMARY_KEY, AUTOINC, AFFECTED_ROWS };
 
-      SqliteModule()
-      {
-          globalNameKey = Zorba::getInstance(0)->getItemFactory()->createString("name");
-          globalDatabaseKey = Zorba::getInstance(0)->getItemFactory()->createString("database");
-          globalTableKey = Zorba::getInstance(0)->getItemFactory()->createString("table");
-          globalTypeKey = Zorba::getInstance(0)->getItemFactory()->createString("type");
-          globalCollationKey = Zorba::getInstance(0)->getItemFactory()->createString("collation");
-          globalNullableKey =  Zorba::getInstance(0)->getItemFactory()->createString("nullable");
-          globalPrimaryKey = Zorba::getInstance(0)->getItemFactory()->createString("primary key");
-          globalAutoincKey = Zorba::getInstance(0)->getItemFactory()->createString("autoincrement");
-          globalAffectedRowsKey = Zorba::getInstance(0)->getItemFactory()->createString("Affected Rows");
-      }
+      SqliteModule();
 
       virtual ~SqliteModule();
 

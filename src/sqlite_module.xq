@@ -44,7 +44,7 @@ declare option ver:module-version "1.0";
  : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside 
  :     SQLite library.
  :)
-declare %an:sequential function s:connect(
+declare %an:nondeterministic function s:connect(
   $db-name as xs:string
   ) as xs:anyURI external;
 
@@ -76,7 +76,7 @@ declare %an:sequential function s:connect(
  : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
  :     library.
  :)
-declare %an:sequential function s:connect(
+declare %an:nondeterministic function s:connect(
   $db-name as xs:string,
   $options as object()?
   ) as xs:anyURI external;
@@ -93,7 +93,7 @@ declare %an:sequential function s:connect(
  : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
  :     library.
  :)
-declare %an:sequential function s:is-connected(
+declare %an:nondeterministic function s:is-connected(
   $conn as xs:anyURI ) as xs:boolean external;
   
 (:~
@@ -138,7 +138,7 @@ declare %an:sequential function s:rollback(
  : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
  :     library.
  :)
-declare %an:sequential function s:execute-query(
+declare %an:nondeterministic function s:execute-query(
   $conn as xs:anyURI,
   $sqlstr as xs:string ) as object()* external;
   
@@ -160,7 +160,7 @@ declare %an:sequential function s:execute-update(
   $sqlstr as xs:string ) as xs:integer external;
 
 (:~
- : Returns the metadata associated to a given prepared SQLite statement.
+ : Returns the metadata associated to a given prepared SQLite statement.<p/>
  :
  : SQLite metadata is returned in the following form:
  : <pre>
@@ -178,7 +178,6 @@ declare %an:sequential function s:execute-update(
  :       }*]
  : }
  : </pre>
- : <p/>
  :
  : @param $pstmnt the sql command as xs:anyURI from which metadata will be
  :     extracted.
@@ -192,7 +191,7 @@ declare %an:sequential function s:execute-update(
  : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
  :     library.
  :)
-declare %an:sequential function s:metadata(
+declare %an:nondeterministic function s:metadata(
   $pstmnt as xs:anyURI ) as object() external;
   
 (:~
@@ -212,7 +211,7 @@ declare %an:sequential function s:metadata(
  : @error s:INTERNAL-SQLITE-PROBLEM if there was an internal error inside SQLite
  :     library.
  :)
-declare %an:sequential function s:prepare-statement(
+declare %an:nondeterministic function s:prepare-statement(
   $conn as xs:anyURI,
   $stmnt as xs:string ) as xs:anyURI external;
   

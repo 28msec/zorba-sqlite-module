@@ -48,40 +48,53 @@ zorba::Item SqliteModule::globalAffectedRowsKey;
 
 /*******************************************************************************
  ******************************************************************************/
-  zorba::ExternalFunction*
-    SqliteModule::getExternalFunction(const zorba::String& localName)
+SqliteModule::SqliteModule()
+{
+  globalNameKey = Zorba::getInstance(0)->getItemFactory()->createString("name");
+  globalDatabaseKey = Zorba::getInstance(0)->getItemFactory()->createString("database");
+  globalTableKey = Zorba::getInstance(0)->getItemFactory()->createString("table");
+  globalTypeKey = Zorba::getInstance(0)->getItemFactory()->createString("type");
+  globalCollationKey = Zorba::getInstance(0)->getItemFactory()->createString("collation");
+  globalNullableKey =  Zorba::getInstance(0)->getItemFactory()->createString("nullable");
+  globalPrimaryKey = Zorba::getInstance(0)->getItemFactory()->createString("primary key");
+  globalAutoincKey = Zorba::getInstance(0)->getItemFactory()->createString("autoincrement");
+  globalAffectedRowsKey = Zorba::getInstance(0)->getItemFactory()->createString("Affected Rows");
+}
+
+zorba::ExternalFunction*
+SqliteModule::getExternalFunction(const zorba::String& localName)
+{
+  FuncMap_t::iterator lIte = theFunctions.find(localName);
+
+  ExternalFunction*& lFunc = theFunctions[localName];
+
+  if (lIte == theFunctions.end())
   {
-    FuncMap_t::iterator lIte = theFunctions.find(localName);
-
-    ExternalFunction*& lFunc = theFunctions[localName];
-
-    if (lIte == theFunctions.end())
+    if (localName == "connect")
     {
-      if (localName == "connect")
-      {
-        lFunc = new ConnectFunction(this);
-      }
-      else if (localName == "is-connected")
-      {
-        lFunc = new IsConnectedFunction(this);
-      }
-      else if (localName == "commit")
-      {
-        lFunc = new CommitFunction(this);
-      }
-      else if (localName == "rollback")
-      {
-        lFunc = new RollbackFunction(this);
-      }
-      else if (localName == "execute-query")
-      {
-        lFunc = new ExecuteQueryFunction(this);
-      }
-      else if (localName == "execute-update")
-      {
-        lFunc = new ExecuteUpdateFunction(this);
-      }
-      else if (localName == "metadata")
+      lFunc = new ConnectFunction(this);
+    }
+    else if (localName == "is-connected")
+    {
+      lFunc = new IsConnectedFunction(this);
+    }
+    else if (localName == "commit")
+    {
+      lFunc = new CommitFunction(this);
+    }
+    else if (localName == "rollback")
+    {
+      lFunc = new RollbackFunction(this);
+    }
+    else if (localName == "execute-query")
+    {
+      lFunc = new ExecuteQueryFunction(this);
+    }
+    else if (localName == "execute-update")
+    {
+      lFunc = new ExecuteUpdateFunction(this);
+    }
+    else if (localName == "metadata")
       {
         lFunc = new MetadataFunction(this);
       }
