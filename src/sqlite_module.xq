@@ -26,8 +26,8 @@ jsoniq version "1.0";
  :)
  
 module namespace s = "http://zorba.io/modules/sqlite";
-declare namespace an = "http://www.zorba-xquery.com/annotations";
-declare namespace ver = "http://www.zorba-xquery.com/options/versioning";
+declare namespace an = "http://zorba.io/annotations";
+declare namespace ver = "http://zorba.io/options/versioning";
 declare option ver:module-version "1.0";
 
 (:~
