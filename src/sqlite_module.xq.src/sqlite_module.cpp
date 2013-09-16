@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <sstream>
 #include <string>
+#include <memory>
 
 #include <sqlite3.h>
 
