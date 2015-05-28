@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+MESSAGE(STATUS "")
+MESSAGE(STATUS "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+MESSAGE(STATUS "Configuring external module <sqlite>")
+MESSAGE(STATUS "-------------------------------------------------------------")
+MESSAGE(STATUS "")
+
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 PROJECT (zorba_sqlite_module)
@@ -35,6 +41,11 @@ INCLUDE ("${Zorba_USE_FILE}")
 
 IF (ZORBA_SUPPRESS_SQLITE)
   MESSAGE (STATUS "ZORBA_SUPRESS_SQLITE is true - not searching for SQLite.")
+  
+  MESSAGE(STATUS "")
+  MESSAGE(STATUS "-------------------------------------------------------------")  
+  MESSAGE(STATUS "Configuration SUPPRESSED for external module <sqlite>")
+  
 ELSE (ZORBA_SUPRESS_SQLITE)
   
   MESSAGE (STATUS "Looking for SQLite")
@@ -58,9 +69,21 @@ ELSE (ZORBA_SUPRESS_SQLITE)
 
     ADD_SUBDIRECTORY("src")
     ADD_TEST_DIRECTORY("${PROJECT_SOURCE_DIR}/test")
+    
+    MESSAGE(STATUS "")
+    MESSAGE(STATUS "-------------------------------------------------------------")
+    MESSAGE(STATUS "Configuration SUCCEEDED for external module <sqlite>")
+    
   ELSE (SQLITE_FOUND)
     MESSAGE (STATUS "SQLite library not found == if you want to use the sqlite functionality please set SQLITE_INCLUDE_DIR and SQLITE_LIBRARIES cmake parameters accordingly.")
+    
+    MESSAGE(STATUS "")
+    MESSAGE(STATUS "-------------------------------------------------------------")  
+    MESSAGE(STATUS "Configuration FAILED for external module <sqlite>")
+    
   ENDIF (SQLITE_FOUND)
 ENDIF (ZORBA_SUPPRESS_SQLITE)
 
 DONE_DECLARING_ZORBA_URIS()
+
+MESSAGE(STATUS "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
